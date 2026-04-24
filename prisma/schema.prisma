@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  OPERADOR
+}
+
+enum Shift {
+  MORNING
+  AFTERNOON
+}
+
+enum WOStatus {
+  OPEN
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  role         Role     @default(OPERADOR)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  magazines       Magazine[]
+  defectiveReports DefectiveReport[]
+  closedWorkOrders WorkOrder[] @relation("ClosedBy")
+
+  @@map("users")
+}
+
+model SmdLine {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  active Boolean @default(true)
+
+  magazines        Magazine[]
+  defectiveReports DefectiveReport[]
+
+  @@map("smd_lines")
+}
+
+model WorkOrder {
+  id                String    @id @default(cuid())
+  woNumber          String    @unique
+  productCode       String
+  totalQty          Int
+  magazineCapacity  Int
+  openedAt          DateTime  @default(now())
+  status            WOStatus  @default(OPEN)
+  closedAt          DateTime?
+  closedById        String?
+  closedBy          User?     @relation("ClosedBy", fields: [closedById], references: [id])
+
+  magazines        Magazine[]
+  defectiveReports DefectiveReport[]
+
+  @@index([status])
+  @@index([openedAt])
+  @@map("work_orders")
+}
+
+model Magazine {
+  id             String    @id @default(cuid())
+  magazineCode   String
+  workOrderId    String
+  workOrder      WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Restrict)
+  smdLineId      Int
+  smdLine        SmdLine   @relation(fields: [smdLineId], references: [id])
+  placasCount    Int
+  shift          Shift
+  createdById    String
+  createdBy      User      @relation(fields: [createdById], references: [id])
+  createdAt      DateTime  @default(now())
+
+  @@index([workOrderId])
+  @@index([smdLineId])
+  @@index([createdAt])
+  @@index([createdById])
+  @@map("magazines")
+}
+
+model DefectiveReport {
+  id             String    @id @default(cuid())
+  reportDate     DateTime  @db.Date
+  shift          Shift
+  smdLineId      Int
+  smdLine        SmdLine   @relation(fields: [smdLineId], references: [id])
+  workOrderId    String
+  workOrder      WorkOrder @relation(fields: [workOrderId], references: [id])
+  defectiveQty   Int
+  reportedById   String
+  reportedBy     User      @relation(fields: [reportedById], references: [id])
+  createdAt      DateTime  @default(now())
+
+  @@index([reportDate])
+  @@index([smdLineId])
+  @@index([workOrderId])
+  @@map("defective_reports")
+}
