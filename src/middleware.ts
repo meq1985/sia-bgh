@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 const ADMIN_PREFIXES = ["/admin", "/api/admin"];
+const NON_OPERADOR_PREFIXES = ["/work-orders"];
 const PUBLIC_PATHS = ["/login", "/api/auth"];
 
 export async function middleware(req: NextRequest) {
@@ -29,6 +30,10 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
     return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  if (NON_OPERADOR_PREFIXES.some((p) => pathname.startsWith(p)) && role === "OPERADOR") {
+    return NextResponse.redirect(new URL("/magazines", req.url));
   }
 
   return NextResponse.next();

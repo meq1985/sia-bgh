@@ -10,17 +10,22 @@ const createSchema = z.object({
   magazineCapacity: z.coerce.number().int().refine((v) => [17, 25, 50].includes(v), {
     message: "magazineCapacity debe ser 17, 25 o 50",
   }),
+  smdLineId: z.coerce.number().int().positive(),
 });
 
 export async function GET(req: NextRequest) {
   await requireSession();
-  const status = req.nextUrl.searchParams.get("status");
+  const sp = req.nextUrl.searchParams;
   const where: Record<string, unknown> = {};
+  const status = sp.get("status");
   if (status === "OPEN" || status === "CLOSED") where.status = status;
+  const smdLineId = sp.get("smdLineId");
+  if (smdLineId) where.smdLineId = Number(smdLineId);
   const rows = await prisma.workOrder.findMany({
     where,
     orderBy: { openedAt: "desc" },
     include: {
+      smdLine: { select: { id: true, name: true } },
       _count: { select: { magazines: true } },
       closedBy: { select: { fullName: true, username: true } },
     },
@@ -29,7 +34,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "SUPERVISOR");
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {

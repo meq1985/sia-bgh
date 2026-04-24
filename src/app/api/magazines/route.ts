@@ -68,6 +68,12 @@ export async function POST(req: NextRequest) {
   if (wo.status !== "OPEN") {
     return NextResponse.json({ error: "La WO está cerrada" }, { status: 400 });
   }
+  if (data.smdLineId !== wo.smdLineId) {
+    return NextResponse.json(
+      { error: "La línea del magazine no coincide con la línea de la WO" },
+      { status: 400 }
+    );
+  }
   if (data.placasCount > wo.magazineCapacity) {
     return NextResponse.json(
       { error: `placasCount supera la capacidad del magazine (${wo.magazineCapacity})` },

@@ -45,6 +45,7 @@ model SmdLine {
   name   String  @unique
   active Boolean @default(true)
 
+  workOrders       WorkOrder[]
   magazines        Magazine[]
   defectiveReports DefectiveReport[]
 
@@ -57,6 +58,8 @@ model WorkOrder {
   productCode       String
   totalQty          Int
   magazineCapacity  Int
+  smdLineId         Int
+  smdLine           SmdLine   @relation(fields: [smdLineId], references: [id])
   openedAt          DateTime  @default(now())
   status            WOStatus  @default(OPEN)
   closedAt          DateTime?
@@ -68,6 +71,7 @@ model WorkOrder {
 
   @@index([status])
   @@index([openedAt])
+  @@index([smdLineId])
   @@map("work_orders")
 }
 

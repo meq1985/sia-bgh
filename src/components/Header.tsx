@@ -8,20 +8,18 @@ import { usePathname } from "next/navigation";
 const navByRole: Record<string, { href: string; label: string }[]> = {
   ADMIN: [
     { href: "/magazines", label: "Magazines" },
-    { href: "/wo", label: "Work Orders" },
+    { href: "/work-orders", label: "Work Orders" },
     { href: "/defectivos", label: "Defectuosas" },
     { href: "/admin/dashboard", label: "Dashboard" },
     { href: "/admin/users", label: "Usuarios" },
-    { href: "/admin/work-orders", label: "Gestión WO" },
   ],
   SUPERVISOR: [
     { href: "/magazines", label: "Magazines" },
-    { href: "/wo", label: "Work Orders" },
+    { href: "/work-orders", label: "Work Orders" },
     { href: "/defectivos", label: "Defectuosas" },
   ],
   OPERADOR: [
     { href: "/magazines", label: "Magazines" },
-    { href: "/wo", label: "Work Orders" },
     { href: "/defectivos", label: "Defectuosas" },
   ],
 };
