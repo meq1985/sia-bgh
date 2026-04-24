@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
   const ws = XLSX.utils.json_to_sheet(flat);
   XLSX.utils.book_append_sheet(wb, ws, "Magazines");
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="magazines_${Date.now()}.xlsx"`,

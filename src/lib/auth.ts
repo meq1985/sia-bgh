@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+type Role = "ADMIN" | "SUPERVISOR" | "OPERADOR";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
@@ -46,7 +47,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = (user as { id: string }).id;
         token.username = (user as { username: string }).username;
-        token.role = (user as { role: string }).role;
+        token.role = (user as { role: Role }).role;
         token.name = (user as { name?: string }).name ?? token.name;
       }
       return token;
@@ -55,7 +56,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { username?: string }).username = token.username as string;
-        (session.user as { role?: string }).role = token.role as string;
+        (session.user as { role?: Role }).role = token.role as Role;
       }
       return session;
     },
