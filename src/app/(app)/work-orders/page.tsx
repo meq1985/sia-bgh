@@ -46,6 +46,7 @@ export default async function WorkOrdersPage() {
                 <th>Línea</th>
                 <th>Producto</th>
                 <th>Total</th>
+                <th>Target diario</th>
                 <th>Cap.</th>
                 <th>Producido</th>
                 <th>Avance</th>
@@ -58,7 +59,7 @@ export default async function WorkOrdersPage() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-bgh-400">
+                  <td colSpan={12} className="py-8 text-center text-bgh-400">
                     No hay Work Orders. Creá la primera usando el formulario de arriba.
                   </td>
                 </tr>
@@ -72,6 +73,7 @@ export default async function WorkOrdersPage() {
                     <td>{w.smdLine.name}</td>
                     <td>{w.productCode}</td>
                     <td className="text-right">{w.totalQty}</td>
+                    <td className="text-right">{w.dailyTargetQty || "—"}</td>
                     <td className="text-right">{w.magazineCapacity}</td>
                     <td className="text-right">{produced}</td>
                     <td className="min-w-[120px]">

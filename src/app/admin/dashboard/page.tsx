@@ -7,151 +7,153 @@ function startOfTodayLocal(): Date {
   return d;
 }
 
-function daysAgo(n: number): Date {
-  const d = startOfTodayLocal();
-  d.setDate(d.getDate() - n);
+function endOfTodayLocal(): Date {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
   return d;
 }
 
 export default async function DashboardPage() {
-  const since30 = daysAgo(30);
-  const since7 = daysAgo(7);
   const today = startOfTodayLocal();
+  const todayEnd = endOfTodayLocal();
 
-  const [
-    openWOs,
-    allLines,
-    magazinesLast30,
-    magazinesLast7,
-    defectivesLast30,
-  ] = await Promise.all([
+  const [allLines, openWOs, magazinesToday, defectivesToday] = await Promise.all([
+    prisma.smdLine.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     prisma.workOrder.findMany({
       where: { status: "OPEN" },
-      include: { magazines: { select: { placasCount: true } } },
+      include: {
+        smdLine: { select: { id: true, name: true } },
+        magazines: { select: { placasCount: true } },
+        defectiveReports: { select: { defectiveQty: true } },
+      },
       orderBy: { openedAt: "desc" },
     }),
-    prisma.smdLine.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     prisma.magazine.findMany({
-      where: { createdAt: { gte: since30 } },
-      select: { smdLineId: true, placasCount: true, createdAt: true, shift: true, workOrderId: true },
-    }),
-    prisma.magazine.findMany({
-      where: { createdAt: { gte: since7 } },
-      select: { smdLineId: true, placasCount: true, createdAt: true, shift: true },
+      where: { createdAt: { gte: today, lte: todayEnd } },
+      select: { smdLineId: true, placasCount: true },
     }),
     prisma.defectiveReport.findMany({
-      where: { reportDate: { gte: since30 } },
-      select: { smdLineId: true, defectiveQty: true, reportDate: true },
+      where: { reportDate: { gte: today, lte: todayEnd } },
+      select: { smdLineId: true, defectiveQty: true },
     }),
   ]);
 
-  const lineIdToName: Record<number, string> = Object.fromEntries(
-    allLines.map((l) => [l.id, l.name])
-  );
-
-  const placasTodayByLine = allLines.map((l) => {
-    const sum = magazinesLast7
-      .filter((m) => m.smdLineId === l.id && m.createdAt >= today)
-      .reduce((s, m) => s + m.placasCount, 0);
-    return { linea: l.name, placas: sum };
+  // Chart 1: % avance acumulado por línea (sumando WOs abiertas de la línea)
+  const completionByLine = allLines.map((l) => {
+    const wos = openWOs.filter((w) => w.smdLineId === l.id);
+    const produced = wos.reduce(
+      (s, w) => s + w.magazines.reduce((a, m) => a + m.placasCount, 0),
+      0
+    );
+    const total = wos.reduce((s, w) => s + w.totalQty, 0);
+    const pct = total > 0 ? Math.round((produced / total) * 1000) / 10 : 0;
+    return { linea: l.name, pct, producido: produced, total };
   });
 
-  const byLine30 = allLines.map((l) => {
-    const rows = magazinesLast30.filter((m) => m.smdLineId === l.id);
-    const total = rows.reduce((s, m) => s + m.placasCount, 0);
-    const hours =
-      rows.length === 0
-        ? 0
-        : Math.max(
-            1,
-            (Math.max(...rows.map((r) => r.createdAt.getTime())) -
-              Math.min(...rows.map((r) => r.createdAt.getTime()))) /
-              3_600_000
-          );
-    const defectives = defectivesLast30
+  // Chart 2: placas producidas hoy por línea
+  const producedTodayByLine = allLines.map((l) => {
+    const placas = magazinesToday
+      .filter((m) => m.smdLineId === l.id)
+      .reduce((s, m) => s + m.placasCount, 0);
+    const defectuosas = defectivesToday
       .filter((d) => d.smdLineId === l.id)
       .reduce((s, d) => s + d.defectiveQty, 0);
+    return { linea: l.name, placas, defectuosas };
+  });
+
+  // Chart 3: FPY por línea por WO activa (un punto por WO, agrupado en chart por línea)
+  const fpyByActiveWo = openWOs
+    .map((w) => {
+      const placas = w.magazines.reduce((a, m) => a + m.placasCount, 0);
+      const defectuosas = w.defectiveReports.reduce((a, d) => a + d.defectiveQty, 0);
+      const denom = placas + defectuosas;
+      const fpy = denom > 0 ? Math.round((placas / denom) * 1000) / 10 : null;
+      return {
+        wo: w.woNumber,
+        linea: w.smdLine.name,
+        producto: w.productCode,
+        placas,
+        defectuosas,
+        fpy,
+        label: `${w.smdLine.name} · ${w.woNumber}`,
+      };
+    })
+    .sort((a, b) => a.linea.localeCompare(b.linea) || a.wo.localeCompare(b.wo));
+
+  // Chart 4: % completado hoy según target diario por línea
+  const dailyTargetByLine = allLines.map((l) => {
+    const wos = openWOs.filter((w) => w.smdLineId === l.id);
+    const target = wos.reduce((s, w) => s + (w.dailyTargetQty || 0), 0);
+    const today = producedTodayByLine.find((x) => x.linea === l.name)?.placas ?? 0;
+    const pct = target > 0 ? Math.round((today / target) * 1000) / 10 : 0;
+    return { linea: l.name, hoy: today, target, pct };
+  });
+
+  // Tabla detalle WO abiertas
+  const openWoDetail = openWOs.map((w) => {
+    const produced = w.magazines.reduce((a, m) => a + m.placasCount, 0);
+    const defectuosas = w.defectiveReports.reduce((a, d) => a + d.defectiveQty, 0);
+    const denom = produced + defectuosas;
+    const fpy = denom > 0 ? Math.round((produced / denom) * 1000) / 10 : null;
+    const pct = w.totalQty > 0 ? Math.min(100, Math.round((produced / w.totalQty) * 100)) : 0;
     return {
-      linea: l.name,
-      placas: total,
-      placasPorHora: Math.round(total / hours),
-      defectuosas: defectives,
+      id: w.id,
+      wo: w.woNumber,
+      producto: w.productCode,
+      linea: w.smdLine.name,
+      target: w.totalQty,
+      dailyTarget: w.dailyTargetQty,
+      producido: produced,
+      defectuosas,
+      fpy,
+      pct,
     };
   });
-
-  const dailyMap = new Map<string, { fecha: string; placas: number }>();
-  for (let i = 6; i >= 0; i--) {
-    const d = daysAgo(i);
-    const key = d.toISOString().slice(0, 10);
-    dailyMap.set(key, { fecha: key.slice(5), placas: 0 });
-  }
-  for (const m of magazinesLast7) {
-    const key = m.createdAt.toISOString().slice(0, 10);
-    const entry = dailyMap.get(key);
-    if (entry) entry.placas += m.placasCount;
-  }
-  const daily = Array.from(dailyMap.values());
-
-  const woProgress = openWOs.map((w) => {
-    const produced = w.magazines.reduce((s, m) => s + m.placasCount, 0);
-    const pct = w.totalQty > 0 ? Math.min(100, Math.round((produced / w.totalQty) * 100)) : 0;
-    return { wo: w.woNumber, producto: w.productCode, producido: produced, total: w.totalQty, pct };
-  });
-
-  const totalPlacas30 = magazinesLast30.reduce((s, m) => s + m.placasCount, 0);
-  const totalDefectuosas30 = defectivesLast30.reduce((s, d) => s + d.defectiveQty, 0);
-  const fpy =
-    totalPlacas30 + totalDefectuosas30 > 0
-      ? ((totalPlacas30 / (totalPlacas30 + totalDefectuosas30)) * 100).toFixed(1)
-      : "—";
-
-  const morningVsAfternoon = [
-    { turno: "Mañana", placas: magazinesLast30.filter((m) => m.shift === "MORNING").reduce((s, m) => s + m.placasCount, 0) },
-    { turno: "Tarde", placas: magazinesLast30.filter((m) => m.shift === "AFTERNOON").reduce((s, m) => s + m.placasCount, 0) },
-  ];
 
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold text-bgh-700">Dashboard</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi label="Placas últimos 30d" value={totalPlacas30.toLocaleString("es-AR")} />
-        <Kpi label="Defectuosas últimos 30d" value={totalDefectuosas30.toLocaleString("es-AR")} />
-        <Kpi label="FPY últimos 30d" value={`${fpy}${typeof fpy === "string" && fpy !== "—" ? "%" : ""}`} />
-        <Kpi label="WO abiertas" value={openWOs.length.toString()} />
-      </div>
-
       <DashboardCharts
-        placasHoy={placasTodayByLine}
-        byLine30={byLine30}
-        daily={daily}
-        turnoData={morningVsAfternoon}
+        completionByLine={completionByLine}
+        producedTodayByLine={producedTodayByLine}
+        fpyByActiveWo={fpyByActiveWo}
+        dailyTargetByLine={dailyTargetByLine}
       />
 
       <div className="card">
-        <h2 className="mb-3 text-lg font-semibold text-bgh-700">Avance de WOs abiertas</h2>
+        <h2 className="mb-3 text-lg font-semibold text-bgh-700">WOs abiertas — detalle</h2>
         <div className="overflow-x-auto">
           <table className="table-base">
             <thead>
               <tr>
+                <th>Línea</th>
                 <th>WO</th>
                 <th>Producto</th>
                 <th>Producido</th>
                 <th>Total</th>
                 <th>Avance</th>
+                <th>Target diario</th>
+                <th>Defect.</th>
+                <th>FPY</th>
               </tr>
             </thead>
             <tbody>
-              {woProgress.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-bgh-400">No hay WOs abiertas.</td></tr>
+              {openWoDetail.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-6 text-center text-bgh-400">
+                    No hay WOs abiertas.
+                  </td>
+                </tr>
               )}
-              {woProgress.map((w) => (
-                <tr key={w.wo}>
+              {openWoDetail.map((w) => (
+                <tr key={w.id}>
+                  <td>{w.linea}</td>
                   <td className="font-medium">{w.wo}</td>
                   <td>{w.producto}</td>
                   <td className="text-right">{w.producido}</td>
-                  <td className="text-right">{w.total}</td>
-                  <td className="min-w-[160px]">
+                  <td className="text-right">{w.target}</td>
+                  <td className="min-w-[140px]">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-full bg-bgh-50 rounded">
                         <div className="h-2 rounded bg-bgh-700" style={{ width: `${w.pct}%` }} />
@@ -159,21 +161,15 @@ export default async function DashboardPage() {
                       <span className="text-xs w-10 text-right">{w.pct}%</span>
                     </div>
                   </td>
+                  <td className="text-right">{w.dailyTarget || "—"}</td>
+                  <td className="text-right">{w.defectuosas}</td>
+                  <td className="text-right">{w.fpy === null ? "—" : `${w.fpy}%`}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Kpi({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="card">
-      <div className="text-xs text-bgh-400">{label}</div>
-      <div className="mt-1 text-2xl font-bold text-bgh-700">{value}</div>
     </div>
   );
 }

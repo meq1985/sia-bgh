@@ -57,6 +57,7 @@ model WorkOrder {
   woNumber          String    @unique
   productCode       String
   totalQty          Int
+  dailyTargetQty    Int       @default(0)
   magazineCapacity  Int
   smdLineId         Int
   smdLine           SmdLine   @relation(fields: [smdLineId], references: [id])

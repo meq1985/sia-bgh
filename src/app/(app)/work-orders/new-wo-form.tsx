@@ -10,6 +10,7 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
   const [woNumber, setWoNumber] = useState("");
   const [productCode, setProductCode] = useState("");
   const [totalQty, setTotalQty] = useState<number | "">("");
+  const [dailyTargetQty, setDailyTargetQty] = useState<number | "">("");
   const [magazineCapacity, setMagazineCapacity] = useState<17 | 25 | 50>(25);
   const [smdLineId, setSmdLineId] = useState<number | "">(lines[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
@@ -30,6 +31,7 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
         woNumber: woNumber.trim(),
         productCode: productCode.trim(),
         totalQty,
+        dailyTargetQty: dailyTargetQty === "" ? 0 : dailyTargetQty,
         magazineCapacity,
         smdLineId,
       }),
@@ -43,6 +45,7 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
     setWoNumber("");
     setProductCode("");
     setTotalQty("");
+    setDailyTargetQty("");
     router.refresh();
   }
 
@@ -99,6 +102,17 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
           value={totalQty}
           onChange={(e) => setTotalQty(e.target.value === "" ? "" : Number(e.target.value))}
           required
+        />
+      </div>
+      <div className="md:col-span-2">
+        <label className="label-base">Cantidad diaria estimada</label>
+        <input
+          type="number"
+          min={0}
+          className="input-base"
+          value={dailyTargetQty}
+          onChange={(e) => setDailyTargetQty(e.target.value === "" ? "" : Number(e.target.value))}
+          placeholder="0 = sin objetivo diario"
         />
       </div>
       {error && (

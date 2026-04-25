@@ -7,6 +7,7 @@ const createSchema = z.object({
   woNumber: z.string().trim().min(1).max(64),
   productCode: z.string().trim().min(1).max(64),
   totalQty: z.coerce.number().int().positive(),
+  dailyTargetQty: z.coerce.number().int().nonnegative(),
   magazineCapacity: z.coerce.number().int().refine((v) => [17, 25, 50].includes(v), {
     message: "magazineCapacity debe ser 17, 25 o 50",
   }),
