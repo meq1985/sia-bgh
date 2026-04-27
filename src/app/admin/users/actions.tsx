@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { AppRole } from "@/lib/rbac";
 
 type User = {
   id: string;
   username: string;
   fullName: string;
-  role: "ADMIN" | "SUPERVISOR" | "OPERADOR";
+  role: AppRole;
   active: boolean;
 };
 
@@ -50,13 +51,15 @@ export function UserRowActions({ user }: { user: User }) {
   return (
     <div className="flex items-center gap-2">
       <select
-        className="input-base py-1 text-xs w-32"
+        className="input-base py-1 text-xs w-40"
         value={user.role}
         onChange={changeRole}
         disabled={busy}
       >
         <option value="OPERADOR">OPERADOR</option>
         <option value="SUPERVISOR">SUPERVISOR</option>
+        <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+        <option value="PROGRAMACION">PROGRAMACION</option>
         <option value="ADMIN">ADMIN</option>
       </select>
       <button onClick={toggleActive} disabled={busy} className="btn-secondary py-1 text-xs">

@@ -2,7 +2,9 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-type Role = "ADMIN" | "SUPERVISOR" | "OPERADOR";
+import type { AppRole } from "@/lib/rbac";
+
+type Role = AppRole;
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 

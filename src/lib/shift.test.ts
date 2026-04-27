@@ -11,12 +11,16 @@ describe("defaultShiftForNow", () => {
     expect(defaultShiftForNow(at(6, 0))).toBe("MORNING");
   });
 
-  it("13:59 sigue siendo MORNING", () => {
-    expect(defaultShiftForNow(at(13, 59))).toBe("MORNING");
+  it("14:59 sigue siendo MORNING", () => {
+    expect(defaultShiftForNow(at(14, 59))).toBe("MORNING");
   });
 
-  it("14:00 exacto pasa a AFTERNOON", () => {
-    expect(defaultShiftForNow(at(14, 0))).toBe("AFTERNOON");
+  it("15:00 exacto pasa a AFTERNOON", () => {
+    expect(defaultShiftForNow(at(15, 0))).toBe("AFTERNOON");
+  });
+
+  it("23:35 sigue siendo AFTERNOON (horas extra)", () => {
+    expect(defaultShiftForNow(at(23, 35))).toBe("AFTERNOON");
   });
 
   it("05:59 es AFTERNOON (madrugada cae en el turno tarde por diseño)", () => {

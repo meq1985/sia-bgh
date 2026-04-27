@@ -10,17 +10,30 @@ const navByRole: Record<string, { href: string; label: string }[]> = {
     { href: "/magazines", label: "Magazines" },
     { href: "/work-orders", label: "Work Orders" },
     { href: "/defectivos", label: "Defectuosas" },
+    { href: "/paradas", label: "Paradas" },
     { href: "/admin/dashboard", label: "Dashboard" },
     { href: "/admin/users", label: "Usuarios" },
+    { href: "/admin/stations", label: "Estaciones" },
+    { href: "/admin/failures", label: "Fallas" },
   ],
   SUPERVISOR: [
     { href: "/magazines", label: "Magazines" },
     { href: "/work-orders", label: "Work Orders" },
     { href: "/defectivos", label: "Defectuosas" },
+    { href: "/paradas", label: "Paradas" },
   ],
   OPERADOR: [
     { href: "/magazines", label: "Magazines" },
     { href: "/defectivos", label: "Defectuosas" },
+    { href: "/paradas", label: "Paradas" },
+  ],
+  MANTENIMIENTO: [
+    { href: "/paradas", label: "Paradas" },
+    { href: "/work-orders", label: "Work Orders" },
+  ],
+  PROGRAMACION: [
+    { href: "/paradas", label: "Paradas" },
+    { href: "/work-orders", label: "Work Orders" },
   ],
 };
 

@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/rbac";
 
 const updateSchema = z.object({
   fullName: z.string().trim().min(1).max(120).optional(),
-  role: z.enum(["ADMIN", "SUPERVISOR", "OPERADOR"]).optional(),
+  role: z.enum(["ADMIN", "SUPERVISOR", "OPERADOR", "MANTENIMIENTO", "PROGRAMACION"]).optional(),
   active: z.boolean().optional(),
   password: z.string().min(6).max(128).optional(),
 });

@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { AppRole } from "@/lib/rbac";
 
 export function NewUserForm() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "SUPERVISOR" | "OPERADOR">("OPERADOR");
+  const [role, setRole] = useState<AppRole>("OPERADOR");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,9 +49,11 @@ export function NewUserForm() {
       </div>
       <div>
         <label className="label-base">Rol</label>
-        <select className="input-base" value={role} onChange={(e) => setRole(e.target.value as "ADMIN" | "SUPERVISOR" | "OPERADOR")}>
+        <select className="input-base" value={role} onChange={(e) => setRole(e.target.value as AppRole)}>
           <option value="OPERADOR">Operador</option>
           <option value="SUPERVISOR">Supervisor</option>
+          <option value="MANTENIMIENTO">Mantenimiento</option>
+          <option value="PROGRAMACION">Programación</option>
           <option value="ADMIN">Administrador</option>
         </select>
       </div>

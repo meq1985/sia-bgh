@@ -8,7 +8,7 @@ const createSchema = z.object({
   username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/),
   fullName: z.string().trim().min(1).max(120),
   password: z.string().min(6).max(128),
-  role: z.enum(["ADMIN", "SUPERVISOR", "OPERADOR"]),
+  role: z.enum(["ADMIN", "SUPERVISOR", "OPERADOR", "MANTENIMIENTO", "PROGRAMACION"]),
 });
 
 export async function GET() {

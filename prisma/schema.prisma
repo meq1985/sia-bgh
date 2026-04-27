@@ -11,6 +11,8 @@ enum Role {
   ADMIN
   SUPERVISOR
   OPERADOR
+  MANTENIMIENTO
+  PROGRAMACION
 }
 
 enum Shift {
@@ -21,6 +23,12 @@ enum Shift {
 enum WOStatus {
   OPEN
   CLOSED
+}
+
+enum LineStopStatus {
+  PENDING
+  VALIDATED
+  REJECTED
 }
 
 model User {
@@ -36,6 +44,8 @@ model User {
   magazines       Magazine[]
   defectiveReports DefectiveReport[]
   closedWorkOrders WorkOrder[] @relation("ClosedBy")
+  reportedLineStops  LineStop[] @relation("StopReportedBy")
+  validatedLineStops LineStop[] @relation("StopValidatedBy")
 
   @@map("users")
 }
@@ -48,8 +58,69 @@ model SmdLine {
   workOrders       WorkOrder[]
   magazines        Magazine[]
   defectiveReports DefectiveReport[]
+  lineStops        LineStop[]
 
   @@map("smd_lines")
+}
+
+model Station {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  active Boolean @default(true)
+
+  failures  CommonFailure[]
+  lineStops LineStop[]
+
+  @@map("stations")
+}
+
+model CommonFailure {
+  id        Int      @id @default(autoincrement())
+  stationId Int
+  station   Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  label     String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  lineStops LineStop[]
+
+  @@unique([stationId, label])
+  @@index([stationId])
+  @@map("common_failures")
+}
+
+model LineStop {
+  id              String         @id @default(cuid())
+  smdLineId       Int
+  smdLine         SmdLine        @relation(fields: [smdLineId], references: [id])
+  workOrderId     String?
+  workOrder       WorkOrder?     @relation(fields: [workOrderId], references: [id])
+  shift           Shift
+  startedAt       DateTime
+  endedAt         DateTime?
+  code            Int
+  stationId       Int
+  station         Station        @relation(fields: [stationId], references: [id])
+  commonFailureId Int?
+  commonFailure   CommonFailure? @relation(fields: [commonFailureId], references: [id])
+  customFailure   String?
+  comment         String?
+  status          LineStopStatus @default(PENDING)
+  reportedById    String
+  reportedBy      User           @relation("StopReportedBy", fields: [reportedById], references: [id])
+  validatedById   String?
+  validatedBy     User?          @relation("StopValidatedBy", fields: [validatedById], references: [id])
+  validatedAt     DateTime?
+  validatedComment String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([smdLineId])
+  @@index([startedAt])
+  @@index([status])
+  @@index([shift])
+  @@index([workOrderId])
+  @@map("line_stops")
 }
 
 model WorkOrder {
@@ -69,6 +140,7 @@ model WorkOrder {
 
   magazines        Magazine[]
   defectiveReports DefectiveReport[]
+  lineStops        LineStop[]
 
   @@index([status])
   @@index([openedAt])
