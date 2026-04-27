@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { cumulativeByMagazine } from "@/lib/cumulative";
 import { MagazinesFilters } from "./filters";
 
 type SearchParams = Promise<{
@@ -47,17 +48,10 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
     ? await prisma.magazine.findMany({
         where: { workOrderId: { in: woIds } },
         orderBy: { createdAt: "asc" },
-        select: { id: true, workOrderId: true, placasCount: true },
+        select: { id: true, workOrderId: true, placasCount: true, createdAt: true },
       })
     : [];
-  const cumulativeByMagazine = new Map<string, number>();
-  const runningByWo = new Map<string, number>();
-  for (const m of woAllMags) {
-    const prev = runningByWo.get(m.workOrderId) ?? 0;
-    const next = prev + m.placasCount;
-    runningByWo.set(m.workOrderId, next);
-    cumulativeByMagazine.set(m.id, next);
-  }
+  const cumulative = cumulativeByMagazine(woAllMags);
 
   const exportQuery = new URLSearchParams();
   Object.entries(sp).forEach(([k, v]) => v && exportQuery.set(k, String(v)));
@@ -115,7 +109,7 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
                 <td>{r.magazineCode}</td>
                 <td className="text-right">{r.placasCount}</td>
                 <td className="text-right font-medium text-bgh-700">
-                  {cumulativeByMagazine.get(r.id) ?? r.placasCount}
+                  {cumulative.get(r.id) ?? r.placasCount}
                 </td>
                 <td>{r.shift === "MORNING" ? "Mañana" : "Tarde"}</td>
                 <td>{r.createdBy.fullName}</td>

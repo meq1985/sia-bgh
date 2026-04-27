@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { computeFpy } from "@/lib/fpy";
 import { DashboardCharts } from "./charts";
 
 function startOfTodayLocal(): Date {
@@ -66,15 +67,13 @@ export default async function DashboardPage() {
     .map((w) => {
       const placas = w.magazines.reduce((a, m) => a + m.placasCount, 0);
       const defectuosas = w.defectiveReports.reduce((a, d) => a + d.defectiveQty, 0);
-      const denom = placas + defectuosas;
-      const fpy = denom > 0 ? Math.round((placas / denom) * 1000) / 10 : null;
       return {
         wo: w.woNumber,
         linea: w.smdLine.name,
         producto: w.productCode,
         placas,
         defectuosas,
-        fpy,
+        fpy: computeFpy(placas, defectuosas),
         label: `${w.smdLine.name} · ${w.woNumber}`,
       };
     })
@@ -93,8 +92,6 @@ export default async function DashboardPage() {
   const openWoDetail = openWOs.map((w) => {
     const produced = w.magazines.reduce((a, m) => a + m.placasCount, 0);
     const defectuosas = w.defectiveReports.reduce((a, d) => a + d.defectiveQty, 0);
-    const denom = produced + defectuosas;
-    const fpy = denom > 0 ? Math.round((produced / denom) * 1000) / 10 : null;
     const pct = w.totalQty > 0 ? Math.min(100, Math.round((produced / w.totalQty) * 100)) : 0;
     return {
       id: w.id,
@@ -105,7 +102,7 @@ export default async function DashboardPage() {
       dailyTarget: w.dailyTargetQty,
       producido: produced,
       defectuosas,
-      fpy,
+      fpy: computeFpy(produced, defectuosas),
       pct,
     };
   });
