@@ -3,21 +3,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/rbac";
 import { defaultShiftForNow } from "@/lib/shift";
-import { VALID_STOP_CODES } from "@/lib/stopCodes";
 
 const createSchema = z.object({
   smdLineId: z.coerce.number().int().positive(),
   workOrderId: z.string().optional().nullable(),
   stationId: z.coerce.number().int().positive(),
-  code: z.coerce.number().int().refine((v) => VALID_STOP_CODES.has(v), {
-    message: "Código de parada inválido (1..18)",
-  }),
   commonFailureId: z.coerce.number().int().positive().optional().nullable(),
   customFailure: z.string().trim().max(200).optional().nullable(),
   comment: z.string().trim().max(500).optional().nullable(),
-  shift: z.enum(["MORNING", "AFTERNOON"]).optional(),
   startedAt: z.string().datetime().optional(),
-  endedAt: z.string().datetime().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -107,21 +101,18 @@ export async function POST(req: NextRequest) {
   }
 
   const startedAt = data.startedAt ? new Date(data.startedAt) : new Date();
-  const endedAt = data.endedAt ? new Date(data.endedAt) : null;
-  const shift = data.shift ?? defaultShiftForNow(startedAt);
+  const shift = defaultShiftForNow(startedAt);
 
   const created = await prisma.lineStop.create({
     data: {
       smdLineId: data.smdLineId,
       workOrderId,
       stationId: data.stationId,
-      code: data.code,
       commonFailureId: data.commonFailureId ?? null,
       customFailure: data.customFailure ?? null,
       comment: data.comment ?? null,
       shift,
       startedAt,
-      endedAt,
       reportedById: session.user.id,
     },
   });

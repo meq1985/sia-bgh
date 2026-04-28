@@ -44,8 +44,9 @@ model User {
   magazines       Magazine[]
   defectiveReports DefectiveReport[]
   closedWorkOrders WorkOrder[] @relation("ClosedBy")
-  reportedLineStops  LineStop[] @relation("StopReportedBy")
-  validatedLineStops LineStop[] @relation("StopValidatedBy")
+  reportedLineStops    LineStop[] @relation("StopReportedBy")
+  validatedLineStops   LineStop[] @relation("StopValidatedBy")
+  interventionLineStops LineStop[] @relation("StopInterventionBy")
 
   @@map("users")
 }
@@ -98,7 +99,7 @@ model LineStop {
   shift           Shift
   startedAt       DateTime
   endedAt         DateTime?
-  code            Int
+  code            Int?
   stationId       Int
   station         Station        @relation(fields: [stationId], references: [id])
   commonFailureId Int?
@@ -108,10 +109,13 @@ model LineStop {
   status          LineStopStatus @default(PENDING)
   reportedById    String
   reportedBy      User           @relation("StopReportedBy", fields: [reportedById], references: [id])
-  validatedById   String?
-  validatedBy     User?          @relation("StopValidatedBy", fields: [validatedById], references: [id])
-  validatedAt     DateTime?
-  validatedComment String?
+  interventionRole   Role?
+  interventionUserId String?
+  interventionUser   User?       @relation("StopInterventionBy", fields: [interventionUserId], references: [id])
+  validatedById     String?
+  validatedBy       User?        @relation("StopValidatedBy", fields: [validatedById], references: [id])
+  validatedAt       DateTime?
+  validatedComment  String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -120,6 +124,7 @@ model LineStop {
   @@index([status])
   @@index([shift])
   @@index([workOrderId])
+  @@index([interventionUserId])
   @@map("line_stops")
 }
 

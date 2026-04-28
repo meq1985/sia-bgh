@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { canValidateLineStop, requireSession } from "@/lib/rbac";
+import { requireSession } from "@/lib/rbac";
 
 const bodySchema = z.object({
   decision: z.enum(["VALIDATED", "REJECTED"]),
@@ -10,9 +10,6 @@ const bodySchema = z.object({
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
-  if (!canValidateLineStop(session.user.role)) {
-    return NextResponse.json({ error: "No autorizado a validar paradas" }, { status: 403 });
-  }
   const { id } = await params;
   const body = await req.json();
   const parsed = bodySchema.safeParse(body);
@@ -31,6 +28,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json(
       { error: "No se puede validar una parada en curso. Finalizala primero." },
       { status: 400 }
+    );
+  }
+
+  const isAdmin = session.user.role === "ADMIN";
+  const isIntervener = stop.interventionUserId === session.user.id;
+  if (!isAdmin && !isIntervener) {
+    return NextResponse.json(
+      { error: "Solo el usuario intervinente o un ADMIN pueden validar/rechazar esta parada" },
+      { status: 403 }
     );
   }
 

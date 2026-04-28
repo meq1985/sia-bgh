@@ -38,7 +38,7 @@ export default async function ParadasPage({ searchParams }: { searchParams: Sear
     where.startedAt = range;
   }
 
-  const [stops, lines, stations, failures, openWOs, myActive] = await Promise.all([
+  const [stops, lines, stations, failures, openWOs, myActive, validators] = await Promise.all([
     prisma.lineStop.findMany({
       where,
       orderBy: { startedAt: "desc" },
@@ -50,6 +50,7 @@ export default async function ParadasPage({ searchParams }: { searchParams: Sear
         commonFailure: { select: { id: true, label: true } },
         reportedBy: { select: { id: true, fullName: true } },
         validatedBy: { select: { id: true, fullName: true } },
+        interventionUser: { select: { id: true, fullName: true, role: true } },
       },
     }),
     prisma.smdLine.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -72,17 +73,27 @@ export default async function ParadasPage({ searchParams }: { searchParams: Sear
         station: { select: { name: true } },
       },
     }),
+    prisma.user.findMany({
+      where: {
+        active: true,
+        role: { in: ["SUPERVISOR", "MANTENIMIENTO", "PROGRAMACION", "ADMIN"] },
+      },
+      orderBy: [{ role: "asc" }, { fullName: "asc" }],
+      select: { id: true, fullName: true, role: true },
+    }),
   ]);
 
   return (
     <ParadasClient
       role={session.user.role}
+      currentUserId={session.user.id}
       myActive={myActive}
       stops={stops}
       lines={lines}
       stations={stations}
       failures={failures}
       openWOs={openWOs}
+      validators={validators}
       defaultShift={defaultShiftForNow()}
       initialFilters={sp}
     />

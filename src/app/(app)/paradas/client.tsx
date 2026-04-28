@@ -1,20 +1,20 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { STOP_CODES, computeStopDurationSec, formatDurationSec, stopCodeInfo } from "@/lib/stopCodes";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { computeStopDurationSec, formatDurationSec } from "@/lib/stopCodes";
 import type { AppRole } from "@/lib/rbac";
 
 type Line = { id: number; name: string };
 type Station = { id: number; name: string };
 type Failure = { id: number; stationId: number; label: string };
 type OpenWO = { id: string; woNumber: string; productCode: string; smdLineId: number };
+type Validator = { id: string; fullName: string; role: AppRole };
 type ActiveStop = {
   id: string;
   startedAt: Date;
   smdLine: { name: string };
   station: { name: string };
-  code: number;
 };
 type Stop = {
   id: string;
@@ -28,40 +28,53 @@ type Stop = {
   shift: "MORNING" | "AFTERNOON";
   startedAt: Date;
   endedAt: Date | null;
-  code: number;
   status: "PENDING" | "VALIDATED" | "REJECTED";
   reportedBy: { id: string; fullName: string };
+  interventionUser: { id: string; fullName: string; role: AppRole } | null;
+  interventionRole: AppRole | null;
   validatedBy: { id: string; fullName: string } | null;
   validatedAt: Date | null;
   validatedComment: string | null;
 };
 
-const VALIDATOR_ROLES: AppRole[] = ["ADMIN", "SUPERVISOR", "MANTENIMIENTO", "PROGRAMACION"];
+const INTERVENTION_ROLES: AppRole[] = ["SUPERVISOR", "MANTENIMIENTO", "PROGRAMACION", "ADMIN"];
+
+const ROLE_LABELS: Record<AppRole, string> = {
+  ADMIN: "Administrador",
+  SUPERVISOR: "Supervisor",
+  OPERADOR: "Operador",
+  MANTENIMIENTO: "Mantenimiento",
+  PROGRAMACION: "Programación",
+};
 
 export function ParadasClient({
   role,
+  currentUserId,
   myActive,
   stops,
   lines,
   stations,
   failures,
   openWOs,
-  defaultShift,
+  validators,
   initialFilters,
 }: {
   role: AppRole;
+  currentUserId: string;
   myActive: ActiveStop[];
   stops: Stop[];
   lines: Line[];
   stations: Station[];
   failures: Failure[];
   openWOs: OpenWO[];
+  validators: Validator[];
   defaultShift: "MORNING" | "AFTERNOON";
   initialFilters: Record<string, string | undefined>;
 }) {
   const router = useRouter();
   const sp = useSearchParams();
-  const canValidate = VALIDATOR_ROLES.includes(role);
+
+  const [endingStop, setEndingStop] = useState<{ id: string; label: string } | null>(null);
 
   function applyFilter(patch: Record<string, string | undefined>) {
     const params = new URLSearchParams(sp.toString());
@@ -88,7 +101,13 @@ export function ParadasClient({
             Tus paradas activas
           </h2>
           {myActive.map((a) => (
-            <ActiveCard key={a.id} stop={a} onAction={() => router.refresh()} />
+            <ActiveCard
+              key={a.id}
+              stop={a}
+              onClickEnd={() =>
+                setEndingStop({ id: a.id, label: `${a.smdLine.name} · ${a.station.name}` })
+              }
+            />
           ))}
         </section>
       )}
@@ -102,7 +121,6 @@ export function ParadasClient({
           stations={stations}
           failures={failures}
           openWOs={openWOs}
-          defaultShift={defaultShift}
           onCreated={() => router.refresh()}
         />
       </section>
@@ -122,42 +140,52 @@ export function ParadasClient({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-bgh-400">Listado</h2>
         <StopsTable
           stops={stops}
-          stations={stations}
-          failures={failures}
-          canValidate={canValidate}
           role={role}
+          currentUserId={currentUserId}
+          onClickEnd={(s) =>
+            setEndingStop({
+              id: s.id,
+              label: `${s.smdLine.name} · ${s.station.name}`,
+            })
+          }
           onAction={() => router.refresh()}
         />
       </section>
+
+      {endingStop && (
+        <EndStopDialog
+          stop={endingStop}
+          validators={validators}
+          onClose={() => setEndingStop(null)}
+          onDone={() => {
+            setEndingStop(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function ActiveCard({ stop, onAction }: { stop: ActiveStop; onAction: () => void }) {
-  const [busy, setBusy] = useState(false);
-  async function endStop() {
-    setBusy(true);
-    const res = await fetch(`/api/line-stops/${stop.id}/end`, { method: "POST" });
-    setBusy(false);
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      alert(typeof d.error === "string" ? d.error : "Error al finalizar");
-      return;
-    }
-    onAction();
-  }
+function ActiveCard({
+  stop,
+  onClickEnd,
+}: {
+  stop: ActiveStop;
+  onClickEnd: () => void;
+}) {
   return (
     <div className="card flex flex-wrap items-center justify-between gap-3 border-l-4 border-bgh-700">
       <div>
         <div className="font-medium text-bgh-700">
-          {stop.smdLine.name} · {stop.station.name} · cód {stop.code}
+          {stop.smdLine.name} · {stop.station.name}
         </div>
         <div className="text-xs text-bgh-400">
           Inició {stop.startedAt.toLocaleString("es-AR")}
         </div>
       </div>
-      <button onClick={endStop} disabled={busy} className="btn-danger">
-        {busy ? "Finalizando..." : "Finalizar parada"}
+      <button onClick={onClickEnd} className="btn-danger">
+        Finalizar parada
       </button>
     </div>
   );
@@ -168,23 +196,19 @@ function NewStopForm({
   stations,
   failures,
   openWOs,
-  defaultShift,
   onCreated,
 }: {
   lines: Line[];
   stations: Station[];
   failures: Failure[];
   openWOs: OpenWO[];
-  defaultShift: "MORNING" | "AFTERNOON";
   onCreated: () => void;
 }) {
   const [smdLineId, setSmdLineId] = useState<number | "">(lines[0]?.id ?? "");
   const [stationId, setStationId] = useState<number | "">(stations[0]?.id ?? "");
-  const [code, setCode] = useState<number>(1);
   const [commonFailureId, setCommonFailureId] = useState<number | "">("");
   const [customFailure, setCustomFailure] = useState("");
   const [comment, setComment] = useState("");
-  const [shift, setShift] = useState<"MORNING" | "AFTERNOON">(defaultShift);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -215,12 +239,9 @@ function NewStopForm({
       body: JSON.stringify({
         smdLineId,
         stationId,
-        code,
         commonFailureId: commonFailureId === "" ? null : commonFailureId,
         customFailure: customFailure.trim() || null,
         comment: comment.trim() || null,
-        shift,
-        // workOrderId queda undefined → backend autovincula si hay 1 sola WO abierta
       }),
     });
     setBusy(false);
@@ -237,7 +258,7 @@ function NewStopForm({
 
   return (
     <div className="card space-y-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <label className="label-base">Línea</label>
           <select
@@ -275,36 +296,11 @@ function NewStopForm({
             ))}
           </select>
         </div>
-        <div>
-          <label className="label-base">Turno</label>
-          <select
-            className="input-base"
-            value={shift}
-            onChange={(e) => setShift(e.target.value as "MORNING" | "AFTERNOON")}
-          >
-            <option value="MORNING">Mañana</option>
-            <option value="AFTERNOON">Tarde</option>
-          </select>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <label className="label-base">Código de falla</label>
-          <select
-            className="input-base"
-            value={code}
-            onChange={(e) => setCode(Number(e.target.value))}
-          >
-            {STOP_CODES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} — {c.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label-base">Falla común (opcional)</label>
+          <label className="label-base">Falla común</label>
           <select
             className="input-base"
             value={commonFailureId}
@@ -319,9 +315,6 @@ function NewStopForm({
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <label className="label-base">Otra falla (texto libre)</label>
           <input
@@ -331,14 +324,15 @@ function NewStopForm({
             placeholder="Si no está en el desplegable"
           />
         </div>
-        <div>
-          <label className="label-base">Comentario</label>
-          <input
-            className="input-base"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-        </div>
+      </div>
+
+      <div>
+        <label className="label-base">Comentario</label>
+        <input
+          className="input-base"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
       </div>
 
       {error && (
@@ -353,6 +347,126 @@ function NewStopForm({
         </button>
       </div>
     </div>
+  );
+}
+
+function EndStopDialog({
+  stop,
+  validators,
+  onClose,
+  onDone,
+}: {
+  stop: { id: string; label: string };
+  validators: Validator[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [interventionRole, setInterventionRole] = useState<AppRole>("MANTENIMIENTO");
+  const [interventionUserId, setInterventionUserId] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const filteredUsers = useMemo(
+    () => validators.filter((v) => v.role === interventionRole),
+    [validators, interventionRole]
+  );
+
+  useEffect(() => {
+    setInterventionUserId(filteredUsers[0]?.id ?? "");
+  }, [filteredUsers]);
+
+  useEffect(() => {
+    ref.current?.showModal();
+    return () => ref.current?.close();
+  }, []);
+
+  async function confirm() {
+    setError(null);
+    if (!interventionUserId) {
+      setError("Elegí un usuario intervinente.");
+      return;
+    }
+    setBusy(true);
+    const res = await fetch(`/api/line-stops/${stop.id}/end`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interventionRole, interventionUserId }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(typeof d.error === "string" ? d.error : "Error al finalizar");
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <dialog
+      ref={ref}
+      className="rounded-lg p-0 backdrop:bg-black/40"
+      onClose={onClose}
+    >
+      <div className="w-[420px] max-w-[95vw] space-y-4 p-6">
+        <div>
+          <h3 className="text-lg font-semibold text-bgh-700">Finalizar parada</h3>
+          <p className="text-xs text-bgh-400">{stop.label}</p>
+        </div>
+
+        <div>
+          <label className="label-base">Rol que intervino</label>
+          <select
+            className="input-base"
+            value={interventionRole}
+            onChange={(e) => setInterventionRole(e.target.value as AppRole)}
+          >
+            {INTERVENTION_ROLES.map((r) => (
+              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="label-base">Usuario intervinente</label>
+          <select
+            className="input-base"
+            value={interventionUserId}
+            onChange={(e) => setInterventionUserId(e.target.value)}
+            disabled={filteredUsers.length === 0}
+          >
+            {filteredUsers.length === 0 && (
+              <option value="">Sin usuarios activos para este rol</option>
+            )}
+            {filteredUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.fullName}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-bgh-400">
+            Solo este usuario (o ADMIN) podrá validar o rechazar la parada.
+          </p>
+        </div>
+
+        {error && (
+          <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="btn-secondary" disabled={busy}>
+            Cancelar
+          </button>
+          <button
+            onClick={confirm}
+            className="btn-primary"
+            disabled={busy || filteredUsers.length === 0}
+          >
+            {busy ? "Finalizando..." : "Confirmar finalización"}
+          </button>
+        </div>
+      </div>
+    </dialog>
   );
 }
 
@@ -443,15 +557,15 @@ function Filters({
 
 function StopsTable({
   stops,
-  canValidate,
   role,
+  currentUserId,
+  onClickEnd,
   onAction,
 }: {
   stops: Stop[];
-  stations: Station[];
-  failures: Failure[];
-  canValidate: boolean;
   role: AppRole;
+  currentUserId: string;
+  onClickEnd: (s: Stop) => void;
   onAction: () => void;
 }) {
   return (
@@ -465,10 +579,10 @@ function StopsTable({
             <th>Línea</th>
             <th>WO</th>
             <th>Estación</th>
-            <th>Cód.</th>
             <th>Falla</th>
             <th>Comentario</th>
             <th>Autor</th>
+            <th>Resolvió</th>
             <th>Estado</th>
             <th></th>
           </tr>
@@ -483,8 +597,9 @@ function StopsTable({
             <StopRow
               key={s.id}
               stop={s}
-              canValidate={canValidate}
               role={role}
+              currentUserId={currentUserId}
+              onClickEnd={() => onClickEnd(s)}
               onAction={onAction}
             />
           ))}
@@ -496,33 +611,27 @@ function StopsTable({
 
 function StopRow({
   stop,
-  canValidate,
   role,
+  currentUserId,
+  onClickEnd,
   onAction,
 }: {
   stop: Stop;
-  canValidate: boolean;
   role: AppRole;
+  currentUserId: string;
+  onClickEnd: () => void;
   onAction: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const startedAt = new Date(stop.startedAt);
   const endedAt = stop.endedAt ? new Date(stop.endedAt) : null;
   const duration = computeStopDurationSec(startedAt, endedAt);
-  const codeInfo = stopCodeInfo(stop.code);
   const failureLabel = stop.commonFailure?.label ?? stop.customFailure ?? "—";
 
-  async function endStop() {
-    setBusy(true);
-    const res = await fetch(`/api/line-stops/${stop.id}/end`, { method: "POST" });
-    setBusy(false);
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      alert(typeof d.error === "string" ? d.error : "Error");
-      return;
-    }
-    onAction();
-  }
+  const canDecide =
+    !!endedAt &&
+    stop.status === "PENDING" &&
+    (role === "ADMIN" || stop.interventionUser?.id === currentUserId);
 
   async function decide(decision: "VALIDATED" | "REJECTED") {
     let comment: string | null = null;
@@ -566,12 +675,23 @@ function StopRow({
       <td>{stop.smdLine.name}</td>
       <td>{stop.workOrder ? stop.workOrder.woNumber : "—"}</td>
       <td>{stop.station.name}</td>
-      <td title={codeInfo?.label ?? ""}>{stop.code}</td>
       <td className="max-w-[200px] truncate" title={failureLabel}>{failureLabel}</td>
       <td className="max-w-[200px] truncate" title={stop.comment ?? ""}>
         {stop.comment ?? "—"}
       </td>
       <td>{stop.reportedBy.fullName}</td>
+      <td>
+        {stop.interventionUser ? (
+          <>
+            <div>{stop.interventionUser.fullName}</div>
+            <div className="text-xs text-bgh-400">
+              {ROLE_LABELS[stop.interventionUser.role]}
+            </div>
+          </>
+        ) : (
+          <span className="text-bgh-400">—</span>
+        )}
+      </td>
       <td>
         <StatusBadge status={stop.status} />
         {stop.validatedBy && (
@@ -579,17 +699,17 @@ function StopRow({
         )}
         {stop.validatedComment && (
           <div className="mt-0.5 text-xs italic text-bgh-400" title={stop.validatedComment}>
-            "{stop.validatedComment.slice(0, 30)}{stop.validatedComment.length > 30 ? "..." : ""}"
+            &ldquo;{stop.validatedComment.slice(0, 30)}{stop.validatedComment.length > 30 ? "..." : ""}&rdquo;
           </div>
         )}
       </td>
       <td className="space-x-1 whitespace-nowrap">
         {!endedAt && (
-          <button className="btn-secondary" onClick={endStop} disabled={busy}>
+          <button className="btn-secondary" onClick={onClickEnd} disabled={busy}>
             Finalizar
           </button>
         )}
-        {canValidate && endedAt && stop.status === "PENDING" && (
+        {canDecide && (
           <>
             <button className="btn-primary" onClick={() => decide("VALIDATED")} disabled={busy}>
               Validar

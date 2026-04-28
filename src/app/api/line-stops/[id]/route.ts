@@ -12,6 +12,7 @@ const patchSchema = z.object({
     .number()
     .int()
     .refine((v) => VALID_STOP_CODES.has(v), { message: "Código inválido" })
+    .nullable()
     .optional(),
   commonFailureId: z.coerce.number().int().positive().nullable().optional(),
   customFailure: z.string().trim().max(200).nullable().optional(),
