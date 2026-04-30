@@ -2,7 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import type { AppRole } from "@/lib/rbac";
+import type { AppRole } from "@/lib/permissions";
 
 type Role = AppRole;
 

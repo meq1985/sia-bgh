@@ -1,20 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import {
+  ALL_ROLES,
+  canEditMagazines,
+  canValidateLineStop,
+  type AppRole,
+} from "@/lib/permissions";
 
-export type AppRole =
-  | "ADMIN"
-  | "SUPERVISOR"
-  | "OPERADOR"
-  | "MANTENIMIENTO"
-  | "PROGRAMACION";
-
-export const ALL_ROLES: AppRole[] = [
-  "ADMIN",
-  "SUPERVISOR",
-  "OPERADOR",
-  "MANTENIMIENTO",
-  "PROGRAMACION",
-];
+export type { AppRole };
+export { ALL_ROLES, canEditMagazines, canValidateLineStop };
 
 export async function requireSession() {
   const session = await getServerSession(authOptions);
@@ -28,17 +22,4 @@ export async function requireRole(...allowed: AppRole[]) {
     throw new Response("No autorizado", { status: 403 });
   }
   return session;
-}
-
-export function canEditMagazines(role: AppRole): boolean {
-  return role === "ADMIN" || role === "SUPERVISOR";
-}
-
-export function canValidateLineStop(role: AppRole): boolean {
-  return (
-    role === "ADMIN" ||
-    role === "SUPERVISOR" ||
-    role === "MANTENIMIENTO" ||
-    role === "PROGRAMACION"
-  );
 }
