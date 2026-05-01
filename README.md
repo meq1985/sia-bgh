@@ -1,98 +1,56 @@
 # SIA — Sistema de Inserción Automática (BGH)
 
-Web app para registrar magazines producidos por las líneas SMD1..SMD8, con panel admin y dashboard analítico. Pensada para correr on-prem con Docker Compose.
+Aplicación web on-prem para registrar la producción de las líneas SMD: magazines, work orders, defectivos y paradas de línea. Diseñada para correr en un servidor de planta con Docker Compose.
 
 ## Stack
+
 - Next.js 15 (App Router) + TypeScript + Tailwind
 - Prisma + PostgreSQL 16
-- NextAuth (Credentials) — **sesión sin expiración automática**, login/logout manual
-- Recharts (gráficos) — xlsx (export Excel)
+- NextAuth (sesión sin expiración automática, login/logout manual)
+- Recharts para gráficos del dashboard
 
-## Estructura
-```
-SIA/
-├── docker-compose.yml       # app + db
-├── Dockerfile
-├── docker/entrypoint.sh     # espera DB, db push, seed, start
-├── prisma/schema.prisma     # modelos
-├── prisma/seed.ts           # seed SMD1..SMD8 + admin inicial
-└── src/
-    ├── app/
-    │   ├── login/           # login
-    │   ├── (app)/           # magazines, wo, defectivos (todos los roles)
-    │   ├── admin/           # dashboard, users, work-orders (solo ADMIN)
-    │   └── api/             # endpoints REST
-    ├── components/
-    ├── lib/                 # db, auth, rbac, shift
-    ├── middleware.ts        # protección por rol
-    └── types/
+## Quick start
+
+```bash
+git clone <url-del-repo> sia-bgh
+cd sia-bgh
+cp .env.example .env
+# Editá .env: cambiá POSTGRES_PASSWORD, generá NEXTAUTH_SECRET, ajustá NEXTAUTH_URL
+docker compose up -d --build
+docker compose logs -f app
 ```
 
-## Deploy on-prem con Docker
+Cuando veas `Iniciando app...` y el log de Next.js, abrí `http://<ip-servidor>:3000` y entrá con las credenciales de admin que pusiste en `.env`.
 
-1. Instalar Docker y Docker Compose en el servidor de planta.
-2. Clonar/copiar este repo al servidor.
-3. Copiar `.env.example` a `.env` y editarlo:
-   ```bash
-   cp .env.example .env
-   ```
-   - Cambiar `POSTGRES_PASSWORD` a algo fuerte.
-   - Generar un `NEXTAUTH_SECRET` seguro (ej. `openssl rand -base64 48`).
-   - Poner `NEXTAUTH_URL=http://<ip-del-servidor>:3000` o el dominio interno.
-   - Definir usuario/pass del admin inicial.
-4. Levantar:
-   ```bash
-   docker compose up -d --build
-   ```
-5. Ver logs:
-   ```bash
-   docker compose logs -f app
-   ```
-6. Abrir `http://<ip-servidor>:3000` y loguearse con las credenciales del admin inicial.
+> Si vas a usar otro puerto, ver [Instalación → cambiar puerto](docs/deploy/instalacion.md#cambiar-puerto).
+> Si el build falla, ver [Troubleshooting](docs/deploy/troubleshooting.md).
 
-El entrypoint del contenedor `app`:
-- Espera a que `db` esté disponible.
-- Ejecuta `prisma db push` (sincroniza schema).
-- Ejecuta el seed (crea SMD1..SMD8 y el admin inicial si no existe).
-- Arranca el servidor Next en el puerto 3000.
+## Documentación
+
+| Para vos si sos... | Empezá por |
+|---|---|
+| Operador, supervisor, mantenimiento, programación | [Manuales por rol](docs/usuario/) (próximamente) |
+| Admin del sistema / IT de planta | [Instalación](docs/deploy/instalacion.md) → [Operación](docs/deploy/operacion.md) |
+| Desarrollador | [Setup local](docs/desarrollo/setup-local.md) (próximamente) |
+
+- [Glosario del dominio](docs/glosario.md) — vocabulario común para todos.
+- [Troubleshooting](docs/deploy/troubleshooting.md) — errores conocidos y cómo salir.
+- [Changelog](docs/changelog.md) — qué cambió y cuándo.
 
 ## Roles
-- **ADMIN**: todo + dashboard + CRUD de usuarios + gestión de WO.
-- **SUPERVISOR**: carga magazines, reporta defectuosas, cierra WO, edita registros.
-- **OPERADOR**: carga magazines, reporta defectuosas, cierra su WO.
 
-## Dominio
-- **Líneas**: SMD1..SMD8 (fijas, seedeadas).
-- **Turnos**: `MORNING` (06–14) y `AFTERNOON` (resto). El formulario los precarga según la hora y pueden editarse.
-- **WO**: número, código de producto, cantidad total, capacidad del magazine (17 / 25 / 50). La capacidad se fija por WO.
-- **Magazine**: un registro por magazine cerrado (no acumulativo). El acumulado de una WO se calcula en las vistas.
-- **Defectuosas**: se cargan al final del turno en una tabla aparte (`DefectiveReport`).
+- **ADMIN**: dashboard + CRUD de usuarios + gestión de catálogos (estaciones, fallas) + todo lo que hacen los demás.
+- **SUPERVISOR**: crear y cerrar Work Orders, validar paradas, cargar magazines/defectivos.
+- **OPERADOR**: cargar magazines, cargar defectivos, iniciar paradas de línea.
+- **MANTENIMIENTO**: intervenir y validar paradas de línea.
+- **PROGRAMACION**: igual que mantenimiento, para fallas de programa/lanzamientos.
 
-## Sesión
-La sesión queda activa hasta que el usuario presione "Salir" en el header. No hay expiración automática. Esto cubre el turno completo y evita desconexiones durante la producción.
+Detalle de qué puede hacer cada uno y cómo en la [guía de usuario](docs/usuario/).
 
-## Export
-Desde `/magazines` se puede exportar el listado filtrado a XLSX o CSV.
+## Backup rápido
 
-## Backups
-Para respaldar la BD:
 ```bash
 docker exec sia_db pg_dump -U sia sia > backup_$(date +%F).sql
 ```
 
-Para restaurar:
-```bash
-cat backup.sql | docker exec -i sia_db psql -U sia -d sia
-```
-
-## Desarrollo local (sin Docker)
-```bash
-npm install
-cp .env.example .env           # ajustar DATABASE_URL
-npx prisma db push
-npm run db:seed
-npm run dev
-```
-
-## Paleta
-Azul corporativo BGH: `#14387f` (primary). Fondo blanco. Letras en azul.
+Detalles en [Operación → backups](docs/deploy/operacion.md#backups).
