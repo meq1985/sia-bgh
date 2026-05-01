@@ -1,0 +1,84 @@
+# Changelog
+
+Registro de cambios en SIA. Sigue el formato de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) y [SemVer](https://semver.org/lang/es/).
+
+## [Unreleased]
+
+### Próximamente
+- Flujo de defectivos con destino: Validación / Reparación / Scrap.
+- Cierre formal de turno con override por horas extra.
+- Guías de usuario por rol.
+- Documentación de desarrollo (arquitectura, modelo de datos, testing).
+
+## [0.1.0] — 2026-04
+
+Versión inicial usable on-prem para registro de producción y paradas de línea.
+
+### Producción
+- Líneas SMD1..SMD8 seedeadas.
+- Work Orders con línea, código de producto, capacidad de magazine, total objetivo y target diario.
+- Magazines con código, placas, turno, asociación a WO.
+- Defectivos por línea + WO + turno (contador único, sin destino).
+- Listado de magazines con acumulado por WO en orden cronológico.
+
+### Paradas de línea
+- Catálogo de estaciones (16 seedeadas) y fallas comunes filtradas por estación.
+- Paradas con inicio/fin manual o por botón, falla común + texto libre, comentario.
+- Auto-vinculación de WO si la línea tiene una sola WO abierta.
+- Flujo de finalización con selección de rol + usuario intervinente.
+- Validación / rechazo restringido al usuario intervinente (con ADMIN como override). Rechazo exige comentario.
+
+### Roles y RBAC
+- 5 roles: ADMIN, SUPERVISOR, OPERADOR, MANTENIMIENTO, PROGRAMACION.
+- Middleware de protección por rol para `/admin/*` y `/work-orders`.
+- Helpers puros en `src/lib/permissions.ts` con tests.
+
+### Dashboard
+- Avance de orden por línea (% producido vs total objetivo).
+- Producción de hoy por línea (placas + defectuosas).
+- FPY por WO activa, agrupado por línea.
+- Cumplimiento del target diario por línea.
+- Tabla "WOs abiertas — detalle" con FPY individual.
+
+### Admin
+- CRUD de usuarios con cambio de rol, activación, reset de contraseña.
+- CRUD de estaciones con desactivación y borrado seguro.
+- CRUD de fallas comunes filtradas por estación.
+
+### Infraestructura
+- Docker Compose con Postgres 16 y Next.js 15.
+- Entrypoint con espera de DB, `prisma db push` automático y seed.
+- Postinstall que regenera el cliente Prisma.
+- CI con typecheck + lint + tests + build.
+- 48 tests unitarios cubriendo helpers puros (`fpy`, `cumulative`, `shift`, `stopCodes`, `permissions`).
+
+### Documentación
+- README con quick start.
+- Glosario del dominio.
+- Guía de instalación, operación y troubleshooting.
+
+### Bugs corregidos durante la construcción
+- Build de Docker fallaba con `apk add openssl` por mirror desactualizado: pinear Alpine 3.20 + `apk update`.
+- `Buffer<ArrayBufferLike>` no asignable a `BodyInit` en route de export: envolver en `new Uint8Array`.
+- `useSearchParams` sin Suspense en `/login`: separar form en componente interno con `<Suspense>`.
+- `prisma generate` durante build de Docker fallaba por falta de schema: copiar `prisma/` antes del `npm install`.
+- `vite-tsconfig-paths` ESM-only rompía vitest config en Windows: alias manual con `process.cwd()`.
+
+---
+
+## Cómo agregar una entrada
+
+Cuando hagas un cambio, sumalo bajo `[Unreleased]` con el subtítulo correspondiente:
+
+- **Agregado** — nuevas features.
+- **Cambiado** — cambios en funcionalidad existente.
+- **Deprecado** — features que se van a quitar.
+- **Removido** — features eliminadas.
+- **Corregido** — bugs.
+- **Seguridad** — fixes de seguridad.
+
+Cuando se cierra una versión:
+
+1. Renombrá `[Unreleased]` por `[X.Y.Z] — YYYY-MM-DD`.
+2. Creá una nueva sección `[Unreleased]` arriba.
+3. Etiquetá el commit con `git tag vX.Y.Z`.
