@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/db";
 import { computeFpy } from "@/lib/fpy";
+import {
+  dailyStopTrend,
+  mttrByStation,
+  timeByLineToday,
+  topFailures,
+  topStationsByDuration,
+} from "@/lib/lineStopAggregations";
 import { DashboardCharts } from "./charts";
 
 function startOfTodayLocal(): Date {
@@ -14,30 +21,52 @@ function endOfTodayLocal(): Date {
   return d;
 }
 
+function daysAgo(n: number): Date {
+  const d = startOfTodayLocal();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
 export default async function DashboardPage() {
+  const now = new Date();
   const today = startOfTodayLocal();
   const todayEnd = endOfTodayLocal();
+  const since30 = daysAgo(30);
 
-  const [allLines, openWOs, magazinesToday, defectivesToday] = await Promise.all([
-    prisma.smdLine.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
-    prisma.workOrder.findMany({
-      where: { status: "OPEN" },
-      include: {
-        smdLine: { select: { id: true, name: true } },
-        magazines: { select: { placasCount: true } },
-        defectiveReports: { select: { defectiveQty: true } },
-      },
-      orderBy: { openedAt: "desc" },
-    }),
-    prisma.magazine.findMany({
-      where: { createdAt: { gte: today, lte: todayEnd } },
-      select: { smdLineId: true, placasCount: true },
-    }),
-    prisma.defectiveReport.findMany({
-      where: { reportDate: { gte: today, lte: todayEnd } },
-      select: { smdLineId: true, defectiveQty: true },
-    }),
-  ]);
+  const [allLines, openWOs, magazinesToday, defectivesToday, stopsLast30] =
+    await Promise.all([
+      prisma.smdLine.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      prisma.workOrder.findMany({
+        where: { status: "OPEN" },
+        include: {
+          smdLine: { select: { id: true, name: true } },
+          magazines: { select: { placasCount: true } },
+          defectiveReports: { select: { defectiveQty: true } },
+        },
+        orderBy: { openedAt: "desc" },
+      }),
+      prisma.magazine.findMany({
+        where: { createdAt: { gte: today, lte: todayEnd } },
+        select: { smdLineId: true, placasCount: true },
+      }),
+      prisma.defectiveReport.findMany({
+        where: { reportDate: { gte: today, lte: todayEnd } },
+        select: { smdLineId: true, defectiveQty: true },
+      }),
+      prisma.lineStop.findMany({
+        where: { startedAt: { gte: since30 } },
+        select: {
+          id: true,
+          smdLineId: true,
+          stationId: true,
+          startedAt: true,
+          endedAt: true,
+          customFailure: true,
+          commonFailure: { select: { label: true } },
+          station: { select: { name: true } },
+        },
+      }),
+    ]);
 
   // Chart 1: % avance acumulado por línea (sumando WOs abiertas de la línea)
   const completionByLine = allLines.map((l) => {
@@ -88,6 +117,13 @@ export default async function DashboardPage() {
     return { linea: l.name, hoy: today, target, pct };
   });
 
+  // Charts de paradas
+  const stopTimeTodayByLine = timeByLineToday(stopsLast30, allLines, now);
+  const stopTrend7d = dailyStopTrend(stopsLast30, now, 7);
+  const topStations7d = topStationsByDuration(stopsLast30, now, 7, 10);
+  const topFailures7d = topFailures(stopsLast30, now, 7, 10);
+  const mttr30d = mttrByStation(stopsLast30, now, 30, 15);
+
   // Tabla detalle WO abiertas
   const openWoDetail = openWOs.map((w) => {
     const produced = w.magazines.reduce((a, m) => a + m.placasCount, 0);
@@ -116,6 +152,11 @@ export default async function DashboardPage() {
         producedTodayByLine={producedTodayByLine}
         fpyByActiveWo={fpyByActiveWo}
         dailyTargetByLine={dailyTargetByLine}
+        stopTimeTodayByLine={stopTimeTodayByLine}
+        stopTrend7d={stopTrend7d}
+        topStations7d={topStations7d}
+        topFailures7d={topFailures7d}
+        mttr30d={mttr30d}
       />
 
       <div className="card">
