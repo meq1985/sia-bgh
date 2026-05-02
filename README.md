@@ -34,7 +34,7 @@ Cuando veas `Iniciando app...` y el log de Next.js, abrí `http://<ip-servidor>:
 | Mantenimiento o Programación | [Guía de mantenimiento/programación](docs/usuario/mantenimiento-programacion.md) |
 | Administrador del sistema | [Guía del admin](docs/usuario/administrador.md) |
 | IT de planta | [Instalación](docs/deploy/instalacion.md) → [Operación](docs/deploy/operacion.md) |
-| Desarrollador | [Setup local](docs/desarrollo/setup-local.md) (próximamente) |
+| Desarrollador | [Setup local](docs/desarrollo/setup-local.md) → [Arquitectura](docs/desarrollo/arquitectura.md) |
 
 - [Glosario del dominio](docs/glosario.md) — vocabulario común para todos.
 - [Troubleshooting](docs/deploy/troubleshooting.md) — errores conocidos y cómo salir.

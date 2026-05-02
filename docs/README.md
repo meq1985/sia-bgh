@@ -11,7 +11,7 @@ Acá vive todo lo que necesitás para usar, operar y mantener SIA. Está organiz
 | Mantenimiento o Programación | [usuario/mantenimiento-programacion.md](usuario/mantenimiento-programacion.md) |
 | Administrador del sistema | [usuario/administrador.md](usuario/administrador.md) |
 | IT de planta (deploy/operación) | [deploy/instalacion.md](deploy/instalacion.md) → [deploy/operacion.md](deploy/operacion.md) |
-| Desarrollador | [desarrollo/setup-local.md](desarrollo/setup-local.md) *(próximamente)* |
+| Desarrollador | [desarrollo/setup-local.md](desarrollo/setup-local.md) |
 
 ## Mapa completo
 
@@ -32,13 +32,13 @@ Acá vive todo lo que necesitás para usar, operar y mantener SIA. Está organiz
 - [usuario/mantenimiento-programacion.md](usuario/mantenimiento-programacion.md) — intervenir y validar paradas técnicas / de programa.
 - [usuario/administrador.md](usuario/administrador.md) — usuarios, catálogos (estaciones, fallas), dashboard, overrides.
 
-### Desarrollo *(próximamente)*
+### Desarrollo
 
-- desarrollo/setup-local.md
-- desarrollo/arquitectura.md
-- desarrollo/modelo-datos.md
-- desarrollo/testing.md
-- desarrollo/contribuir.md
+- [desarrollo/setup-local.md](desarrollo/setup-local.md) — clonar, instalar, levantar Postgres local, dev server, comandos útiles.
+- [desarrollo/arquitectura.md](desarrollo/arquitectura.md) — stack, capas, flujos de auth y RBAC, decisiones de diseño.
+- [desarrollo/modelo-datos.md](desarrollo/modelo-datos.md) — cada modelo Prisma con su propósito de negocio, índices, reglas de borrado.
+- [desarrollo/testing.md](desarrollo/testing.md) — capas de testing, qué se testea hoy, qué viene, cómo agregar tests.
+- [desarrollo/contribuir.md](desarrollo/contribuir.md) — branches, commits convencionales, PRs, code review, merge.
 
 ### Cambios
 
