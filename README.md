@@ -29,8 +29,11 @@ Cuando veas `Iniciando app...` y el log de Next.js, abrí `http://<ip-servidor>:
 
 | Para vos si sos... | Empezá por |
 |---|---|
-| Operador, supervisor, mantenimiento, programación | [Manuales por rol](docs/usuario/) (próximamente) |
-| Admin del sistema / IT de planta | [Instalación](docs/deploy/instalacion.md) → [Operación](docs/deploy/operacion.md) |
+| Operador en línea | [Guía del operador](docs/usuario/operador.md) |
+| Supervisor de turno | [Guía del supervisor](docs/usuario/supervisor.md) |
+| Mantenimiento o Programación | [Guía de mantenimiento/programación](docs/usuario/mantenimiento-programacion.md) |
+| Administrador del sistema | [Guía del admin](docs/usuario/administrador.md) |
+| IT de planta | [Instalación](docs/deploy/instalacion.md) → [Operación](docs/deploy/operacion.md) |
 | Desarrollador | [Setup local](docs/desarrollo/setup-local.md) (próximamente) |
 
 - [Glosario del dominio](docs/glosario.md) — vocabulario común para todos.

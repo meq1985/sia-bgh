@@ -6,10 +6,10 @@ Acá vive todo lo que necesitás para usar, operar y mantener SIA. Está organiz
 
 | Sos... | Andá a |
 |---|---|
-| Operador en línea | [usuario/operador.md](usuario/operador.md) *(próximamente)* |
-| Supervisor de turno | [usuario/supervisor.md](usuario/supervisor.md) *(próximamente)* |
-| Mantenimiento o Programación | [usuario/mantenimiento-programacion.md](usuario/mantenimiento-programacion.md) *(próximamente)* |
-| Administrador del sistema | [usuario/administrador.md](usuario/administrador.md) *(próximamente)* |
+| Operador en línea | [usuario/operador.md](usuario/operador.md) |
+| Supervisor de turno | [usuario/supervisor.md](usuario/supervisor.md) |
+| Mantenimiento o Programación | [usuario/mantenimiento-programacion.md](usuario/mantenimiento-programacion.md) |
+| Administrador del sistema | [usuario/administrador.md](usuario/administrador.md) |
 | IT de planta (deploy/operación) | [deploy/instalacion.md](deploy/instalacion.md) → [deploy/operacion.md](deploy/operacion.md) |
 | Desarrollador | [desarrollo/setup-local.md](desarrollo/setup-local.md) *(próximamente)* |
 
@@ -25,12 +25,12 @@ Acá vive todo lo que necesitás para usar, operar y mantener SIA. Está organiz
 - [deploy/operacion.md](deploy/operacion.md) — backup, restore, logs, reinicios, recuperación si te quedaste afuera, gestión del entrypoint.
 - [deploy/troubleshooting.md](deploy/troubleshooting.md) — errores conocidos del build de Docker, Prisma, NextAuth y CI con su fix.
 
-### Usuario final *(próximamente)*
+### Usuario final
 
-- usuario/operador.md
-- usuario/supervisor.md
-- usuario/mantenimiento-programacion.md
-- usuario/administrador.md
+- [usuario/operador.md](usuario/operador.md) — cargar magazines, iniciar y finalizar paradas, cargar defectivos.
+- [usuario/supervisor.md](usuario/supervisor.md) — crear y cerrar Work Orders, validar paradas, auditar producción.
+- [usuario/mantenimiento-programacion.md](usuario/mantenimiento-programacion.md) — intervenir y validar paradas técnicas / de programa.
+- [usuario/administrador.md](usuario/administrador.md) — usuarios, catálogos (estaciones, fallas), dashboard, overrides.
 
 ### Desarrollo *(próximamente)*
 
