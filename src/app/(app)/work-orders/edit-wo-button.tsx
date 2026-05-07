@@ -12,6 +12,7 @@ export type EditableWo = {
   totalQty: number;
   dailyTargetQty: number;
   magazineCapacity: number;
+  troquel: number;
   smdLineId: number;
   hasMagazines: boolean;
 };
@@ -46,6 +47,7 @@ function EditWoDialog({
   const [magazineCapacity, setMagazineCapacity] = useState<17 | 25 | 50>(
     wo.magazineCapacity as 17 | 25 | 50,
   );
+  const [troquel, setTroquel] = useState<number | "">(wo.troquel);
   const [smdLineId, setSmdLineId] = useState<number | "">(wo.smdLineId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +69,7 @@ function EditWoDialog({
     if (!wo.hasMagazines) {
       body.woNumber = woNumber.trim();
       body.smdLineId = smdLineId;
+      body.troquel = troquel;
     }
     const res = await fetch(`/api/wo/${wo.id}`, {
       method: "PATCH",
@@ -131,7 +134,7 @@ function EditWoDialog({
             </select>
           </div>
           <div>
-            <label className="label-base">Capacidad</label>
+            <label className="label-base">Capacidad (paneles × magazine)</label>
             <select
               className="input-base"
               value={magazineCapacity}
@@ -141,6 +144,17 @@ function EditWoDialog({
               <option value={25}>25</option>
               <option value={50}>50</option>
             </select>
+          </div>
+          <div>
+            <label className="label-base">Troquel (placas × panel)</label>
+            <input
+              type="number"
+              min={1}
+              className="input-base"
+              value={troquel}
+              onChange={(e) => setTroquel(e.target.value === "" ? "" : Number(e.target.value))}
+              disabled={wo.hasMagazines}
+            />
           </div>
           <div>
             <label className="label-base">Cantidad total</label>

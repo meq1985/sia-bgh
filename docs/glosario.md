@@ -11,16 +11,25 @@ Línea de inserción automática de componentes (Surface-Mount Device). En BGH e
 Cada máquina o puesto físico dentro de una línea. Ejemplos: `loader`, `printer`, `spi`, `cm602-1`, `horno`, `unloader`. Es donde puede ocurrir una **parada**. El catálogo de estaciones se administra desde **/admin/stations**. Modelo: `Station`.
 
 ### Work Order (WO)
-Orden de trabajo. Define qué producto se va a fabricar, en qué cantidad, en qué línea y con qué capacidad de magazine. Tiene un `dailyTargetQty` (cantidad diaria estimada) y un `totalQty` (objetivo total). Mientras está abierta (`OPEN`) se pueden cargar magazines contra ella; al cerrarse (`CLOSED`) se congela. Modelo: `WorkOrder`.
+Orden de trabajo. Define qué producto se va a fabricar, en qué cantidad (placas), en qué línea, con qué capacidad de magazine (paneles × magazine) y qué troquel (placas × panel). Tiene un `dailyTargetQty` (cantidad diaria estimada en placas) y un `totalQty` (objetivo total en placas). Mientras está abierta (`OPEN`) se pueden cargar magazines contra ella; al cerrarse (`CLOSED`) se congela. Modelo: `WorkOrder`.
 
 ### Magazine
-Bandeja física que se carga con N **placas** producidas. Cuando se cierra y sale de la línea, se registra como un **Magazine** con su `placasCount`, código de magazine, turno, autor y WO asociada. La capacidad teórica del magazine (17 / 25 / 50 placas) se define en la WO. Modelo: `Magazine`.
+Bandeja física que se carga con N **paneles** producidos. Cuando se cierra y sale de la línea, se registra como un **Magazine** con su `placasCount` (cantidad de paneles — el nombre del campo es histórico), código de magazine, turno, autor y WO asociada. La capacidad teórica del magazine (17 / 25 / 50 paneles × magazine) se define en la WO. Modelo: `Magazine`.
+
+### Panel
+Unidad física que se carga en un magazine. Es lo que antes llamábamos "placa". En la base se almacena en `Magazine.placasCount` (nombre histórico que se mantuvo para no migrar datos).
+
+### Placa
+Unidad menor que se obtiene cortando un panel. **1 panel = `troquel` placas**. Es la unidad final del producto y la que se compara contra `totalQty`.
+
+### Troquel
+Campo numérico de la WO. Indica cuántas placas se obtienen de cada panel. Multiplicador para convertir paneles a placas en todos los cálculos de avance.
 
 ### Producción Conforme
-Suma de `placasCount` de todos los magazines registrados contra una WO. Es la métrica de "cuánto se produjo bien".
+Suma de `placasCount` (paneles) × `troquel` de la WO = placas producidas. Es la métrica de "cuánto se produjo bien", expresada en placas.
 
 ### Acumulado WO
-En el listado de magazines, suma progresiva de placas dentro de la misma WO en orden cronológico. Útil para ver el avance acumulado WO por WO.
+En el listado de magazines, suma progresiva de paneles dentro de la misma WO en orden cronológico, multiplicada por el troquel de la WO. Se muestra en placas.
 
 ## Defectos *(modelo actual; en evolución)*
 

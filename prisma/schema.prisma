@@ -135,6 +135,7 @@ model WorkOrder {
   totalQty          Int
   dailyTargetQty    Int       @default(0)
   magazineCapacity  Int
+  troquel           Int       @default(1)
   smdLineId         Int
   smdLine           SmdLine   @relation(fields: [smdLineId], references: [id])
   openedAt          DateTime  @default(now())

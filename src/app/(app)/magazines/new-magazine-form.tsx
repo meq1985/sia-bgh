@@ -10,6 +10,7 @@ type WO = {
   woNumber: string;
   productCode: string;
   magazineCapacity: number;
+  troquel: number;
   totalQty: number;
   smdLineId: number;
 };
@@ -104,7 +105,7 @@ export function NewMagazineForm({
             >
               {filteredWOs.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.woNumber} · {w.productCode} (cap. {w.magazineCapacity}, total {w.totalQty})
+                  {w.woNumber} · {w.productCode} (cap. {w.magazineCapacity} paneles, troquel {w.troquel}, total {w.totalQty} placas)
                 </option>
               ))}
             </select>
@@ -124,7 +125,7 @@ export function NewMagazineForm({
         </div>
         <div>
           <label className="label-base">
-            Placas {selectedWO && (
+            Paneles {selectedWO && (
               <span className="text-bgh-400 font-normal">(máx {selectedWO.magazineCapacity})</span>
             )}
           </label>

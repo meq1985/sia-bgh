@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/rbac";
-import { isWoComplete, producedFromMagazines } from "@/lib/wo";
+import { isWoComplete, producedPlacasFromMagazines } from "@/lib/wo";
 
 const createSchema = z.object({
   magazineCode: z.string().trim().min(1).max(64),
@@ -85,8 +85,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const produced = producedFromMagazines(wo.magazines);
-  if (isWoComplete(produced, wo.totalQty)) {
+  const producedPlacas = producedPlacasFromMagazines(wo.magazines, wo.troquel);
+  if (isWoComplete(producedPlacas, wo.totalQty)) {
     return NextResponse.json(
       { error: "WO ya completada al 100%" },
       { status: 400 }
@@ -104,7 +104,8 @@ export async function POST(req: NextRequest) {
         createdById: session.user.id,
       },
     });
-    if (isWoComplete(produced + data.placasCount, wo.totalQty)) {
+    const newProducedPlacas = producedPlacas + data.placasCount * wo.troquel;
+    if (isWoComplete(newProducedPlacas, wo.totalQty)) {
       await tx.workOrder.update({
         where: { id: wo.id },
         data: {

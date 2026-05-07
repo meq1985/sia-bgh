@@ -107,9 +107,10 @@ Orden de trabajo de producción. Define qué se va a fabricar, cuánto y en qué
 |---|---|
 | `woNumber` | Identificador del negocio (de planificación). Único en todo el sistema. |
 | `productCode` | Modelo / código de producto (ej. `TKLE3214D`). |
-| `totalQty` | Objetivo total de placas. Se compara contra producido para % de avance. |
-| `dailyTargetQty` | Cantidad diaria estimada. Default 0. Usado en el dashboard para calcular cumplimiento del día. Si es 0, no se reportan métricas diarias para esta WO. |
-| `magazineCapacity` | Cuántas placas entran en un magazine. 17 / 25 / 50 (validado por zod). Inmutable post-creación. |
+| `totalQty` | Objetivo total **en placas**. Se compara contra producido (paneles × troquel) para % de avance. |
+| `dailyTargetQty` | Cantidad diaria estimada **en placas**. Default 0. Usado en el dashboard para calcular cumplimiento del día. Si es 0, no se reportan métricas diarias para esta WO. |
+| `magazineCapacity` | Cuántos **paneles** entran en un magazine. 17 / 25 / 50 (validado por zod). Solo editable mientras la WO no tenga magazines cargados. |
+| `troquel` | Cuántas **placas** se obtienen de cada panel. Multiplicador para convertir paneles a placas. Solo editable mientras la WO no tenga magazines cargados. Default 1 (para WOs migradas). |
 | `smdLineId` | Línea asignada. Una WO pertenece a **una sola línea**. |
 | `status` | OPEN o CLOSED. |
 | `openedAt` | Cuándo se creó. Default `now()`. |
@@ -117,30 +118,31 @@ Orden de trabajo de producción. Define qué se va a fabricar, cuánto y en qué
 
 **Reglas**:
 
-- `magazineCapacity` no se puede cambiar después de creada (la columna no es nullable y no hay UI para editarla).
+- `magazineCapacity` y `troquel` solo se pueden cambiar si la WO no tiene magazines cargados.
 - Solo se puede borrar si tiene 0 magazines asociados.
 - Una línea puede tener varias WOs abiertas a la vez (se desaconseja pero está permitido).
 
 ### `Magazine`
 
-Bandeja de placas que sale cerrada de la línea. Es el evento productivo principal.
+Bandeja de paneles que sale cerrada de la línea. Es el evento productivo principal.
 
 | Campo | Por qué |
 |---|---|
 | `magazineCode` | Código físico del magazine (ej. `MG-001`). No es único globalmente — el mismo código se reutiliza entre WOs. |
-| `workOrderId` | A qué WO pertenece. La WO define la capacidad y la línea. |
+| `workOrderId` | A qué WO pertenece. La WO define la capacidad, la línea y el troquel. |
 | `smdLineId` | En qué línea se produjo. **Tiene que coincidir con la línea de la WO** (validado en API). |
-| `placasCount` | Cuántas placas entraron en este magazine. ≤ `workOrder.magazineCapacity`. |
+| `placasCount` | Cuántos **paneles** entraron en este magazine. ≤ `workOrder.magazineCapacity`. El nombre del campo es histórico (antes representaba placas). |
 | `shift` | Mañana o Tarde. Editable en el form. |
 | `createdById` | Operador que cargó el registro. |
 | `createdAt` | Cuándo se cerró el magazine. Default `now()`. |
 
 **Reglas**:
 
-- No se puede crear contra una WO cerrada (validación en API).
-- `placasCount` ≤ `magazineCapacity`.
+- No se puede crear contra una WO cerrada o ya completada al 100% (validación en API).
+- `placasCount` (paneles) ≤ `magazineCapacity`.
 - `smdLineId` debe coincidir con `workOrder.smdLineId`.
 - ON DELETE de WO es `Restrict` — no se puede borrar la WO si hay magazines.
+- Las placas producidas por un magazine = `placasCount` × `workOrder.troquel`.
 
 ### `DefectiveReport`
 

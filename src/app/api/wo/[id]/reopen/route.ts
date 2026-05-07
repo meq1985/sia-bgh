@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
-import { isWoComplete, producedFromMagazines } from "@/lib/wo";
+import { isWoComplete, producedPlacasFromMagazines } from "@/lib/wo";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("ADMIN", "SUPERVISOR");
@@ -14,8 +14,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (wo.status !== "CLOSED") {
     return NextResponse.json({ error: "La WO no está cerrada" }, { status: 400 });
   }
-  const produced = producedFromMagazines(wo.magazines);
-  if (isWoComplete(produced, wo.totalQty)) {
+  const producedPlacas = producedPlacasFromMagazines(wo.magazines, wo.troquel);
+  if (isWoComplete(producedPlacas, wo.totalQty)) {
     return NextResponse.json(
       { error: "WO está al 100%, no se puede reabrir" },
       { status: 400 }

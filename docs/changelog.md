@@ -45,6 +45,23 @@ Registro de cambios en SIA. Sigue el formato de [Keep a Changelog](https://keepa
 - **Work Orders — filtros en el listado.** Nueva sección de filtros en
   `/work-orders` con búsqueda por número de WO o código de producto,
   línea, estado (Abiertas/Cerradas) y rango de fechas de apertura.
+- **Nuevo concepto: panel y troquel.** Lo que antes se llamaba "placa"
+  pasa a llamarse **panel**. La WO suma un campo `troquel: Int` que
+  indica cuántas placas se obtienen de cada panel. La columna
+  `Magazine.placasCount` mantiene su nombre por compatibilidad pero
+  ahora representa **paneles**. El producido y el avance se calculan
+  como `paneles × troquel = placas` y se comparan contra
+  `WorkOrder.totalQty` (que sigue siendo placas). El troquel es
+  obligatorio al crear una WO; las WOs existentes quedan en troquel=1
+  (default de migración).
+- Helpers nuevos: `panelsFromMagazines` (renombrado desde
+  `producedFromMagazines`) y `producedPlacasFromMagazines` en
+  `src/lib/wo.ts`. Tests actualizados.
+- UI: form de Nueva WO suma input "Troquel"; label "Capacidad" pasa a
+  "Capacidad (paneles × magazine)". Listado de WO suma columna
+  Troquel. En `/magazines` la columna "Placas" se renombra a "Paneles"
+  y "Acumulado WO" pasa a mostrarse en placas. El export incluye
+  Troquel y la columna "Placas" calculada.
 
 ### Agregado (helpers)
 - `src/lib/wo.ts` con `producedFromMagazines` e `isWoComplete`,

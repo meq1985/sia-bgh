@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { isWoComplete, producedFromMagazines } from "./wo";
+import {
+  isWoComplete,
+  panelsFromMagazines,
+  producedPlacasFromMagazines,
+} from "./wo";
 
-describe("producedFromMagazines", () => {
+describe("panelsFromMagazines", () => {
   it("devuelve 0 con array vacío", () => {
-    expect(producedFromMagazines([])).toBe(0);
+    expect(panelsFromMagazines([])).toBe(0);
   });
 
-  it("suma placasCount", () => {
-    expect(producedFromMagazines([{ placasCount: 17 }, { placasCount: 25 }])).toBe(42);
+  it("suma placasCount (cada item representa paneles)", () => {
+    expect(panelsFromMagazines([{ placasCount: 17 }, { placasCount: 25 }])).toBe(42);
   });
 
   it("ignora otros campos del objeto", () => {
@@ -15,7 +19,25 @@ describe("producedFromMagazines", () => {
       { placasCount: 10, foo: "bar" },
       { placasCount: 5, baz: 99 },
     ] as unknown as { placasCount: number }[];
-    expect(producedFromMagazines(mags)).toBe(15);
+    expect(panelsFromMagazines(mags)).toBe(15);
+  });
+});
+
+describe("producedPlacasFromMagazines", () => {
+  it("multiplica paneles por troquel", () => {
+    expect(producedPlacasFromMagazines([{ placasCount: 25 }], 4)).toBe(100);
+  });
+
+  it("troquel = 1 mantiene el resultado igual a paneles", () => {
+    expect(producedPlacasFromMagazines([{ placasCount: 25 }, { placasCount: 17 }], 1)).toBe(42);
+  });
+
+  it("troquel = 0 da 0 placas", () => {
+    expect(producedPlacasFromMagazines([{ placasCount: 25 }], 0)).toBe(0);
+  });
+
+  it("array vacío da 0 sin importar troquel", () => {
+    expect(producedPlacasFromMagazines([], 4)).toBe(0);
   });
 });
 

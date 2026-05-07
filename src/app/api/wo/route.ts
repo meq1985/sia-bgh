@@ -11,6 +11,7 @@ const createSchema = z.object({
   magazineCapacity: z.coerce.number().int().refine((v) => [17, 25, 50].includes(v), {
     message: "magazineCapacity debe ser 17, 25 o 50",
   }),
+  troquel: z.coerce.number().int().positive(),
   smdLineId: z.coerce.number().int().positive(),
 });
 

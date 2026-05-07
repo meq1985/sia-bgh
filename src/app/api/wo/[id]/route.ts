@@ -12,6 +12,7 @@ const baseFields = {
   magazineCapacity: z.coerce.number().int().refine((n) => n === 17 || n === 25 || n === 50, {
     message: "magazineCapacity debe ser 17, 25 o 50",
   }).optional(),
+  troquel: z.coerce.number().int().positive().optional(),
   smdLineId: z.coerce.number().int().positive().optional(),
 };
 
@@ -44,6 +45,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (data.smdLineId !== undefined && data.smdLineId !== wo.smdLineId) {
       return NextResponse.json(
         { error: "No se puede cambiar la línea con magazines cargados" },
+        { status: 400 }
+      );
+    }
+    if (data.troquel !== undefined && data.troquel !== wo.troquel) {
+      return NextResponse.json(
+        { error: "No se puede cambiar el troquel con magazines cargados" },
         { status: 400 }
       );
     }

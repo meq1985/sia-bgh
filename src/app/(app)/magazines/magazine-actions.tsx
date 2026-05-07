@@ -106,7 +106,7 @@ function EditMagazineDialog({
           />
         </div>
         <div>
-          <label className="label-base">Placas (cap. {mag.magazineCapacity})</label>
+          <label className="label-base">Paneles (cap. {mag.magazineCapacity})</label>
           <input
             type="number"
             min={1}

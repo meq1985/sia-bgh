@@ -12,6 +12,7 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
   const [totalQty, setTotalQty] = useState<number | "">("");
   const [dailyTargetQty, setDailyTargetQty] = useState<number | "">("");
   const [magazineCapacity, setMagazineCapacity] = useState<17 | 25 | 50>(25);
+  const [troquel, setTroquel] = useState<number | "">("");
   const [smdLineId, setSmdLineId] = useState<number | "">(lines[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +22,10 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
     setError(null);
     if (!smdLineId) {
       setError("Elegí una línea.");
+      return;
+    }
+    if (!troquel || troquel < 1) {
+      setError("Indicá el troquel (placas por panel).");
       return;
     }
     setLoading(true);
@@ -33,6 +38,7 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
         totalQty,
         dailyTargetQty: dailyTargetQty === "" ? 0 : dailyTargetQty,
         magazineCapacity,
+        troquel,
         smdLineId,
       }),
     });
@@ -46,6 +52,7 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
     setProductCode("");
     setTotalQty("");
     setDailyTargetQty("");
+    setTroquel("");
     router.refresh();
   }
 
@@ -82,7 +89,7 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
         />
       </div>
       <div>
-        <label className="label-base">Capacidad</label>
+        <label className="label-base">Capacidad (paneles × magazine)</label>
         <select
           className="input-base"
           value={magazineCapacity}
@@ -92,6 +99,17 @@ export function NewWoForm({ lines }: { lines: Line[] }) {
           <option value={25}>25</option>
           <option value={50}>50</option>
         </select>
+      </div>
+      <div>
+        <label className="label-base">Troquel (placas × panel)</label>
+        <input
+          type="number"
+          min={1}
+          className="input-base"
+          value={troquel}
+          onChange={(e) => setTroquel(e.target.value === "" ? "" : Number(e.target.value))}
+          required
+        />
       </div>
       <div className="md:col-span-2">
         <label className="label-base">Cantidad total de placas</label>

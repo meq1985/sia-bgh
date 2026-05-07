@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { cumulativeByMagazine } from "@/lib/cumulative";
 import { requireSession } from "@/lib/rbac";
-import { isWoComplete, producedFromMagazines } from "@/lib/wo";
+import { isWoComplete, producedPlacasFromMagazines } from "@/lib/wo";
 import { MagazinesFilters } from "./filters";
 import { MagazineActions } from "./magazine-actions";
 import { NewMagazineForm } from "./new-magazine-form";
@@ -40,7 +40,9 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
       orderBy: { createdAt: "desc" },
       take: 200,
       include: {
-        workOrder: { select: { woNumber: true, productCode: true, magazineCapacity: true } },
+        workOrder: {
+          select: { woNumber: true, productCode: true, magazineCapacity: true, troquel: true },
+        },
         smdLine: { select: { name: true } },
         createdBy: { select: { username: true, fullName: true } },
       },
@@ -55,6 +57,7 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
         woNumber: true,
         productCode: true,
         magazineCapacity: true,
+        troquel: true,
         totalQty: true,
         smdLineId: true,
         magazines: { select: { placasCount: true } },
@@ -63,12 +66,13 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
   ]);
 
   const eligibleWOs = openWOsWithMags
-    .filter((w) => !isWoComplete(producedFromMagazines(w.magazines), w.totalQty))
+    .filter((w) => !isWoComplete(producedPlacasFromMagazines(w.magazines, w.troquel), w.totalQty))
     .map((w) => ({
       id: w.id,
       woNumber: w.woNumber,
       productCode: w.productCode,
       magazineCapacity: w.magazineCapacity,
+      troquel: w.troquel,
       totalQty: w.totalQty,
       smdLineId: w.smdLineId,
     }));
@@ -127,7 +131,7 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
               <th>Producto</th>
               <th>Línea</th>
               <th>Cód. magazine</th>
-              <th>Placas</th>
+              <th>Paneles</th>
               <th>Acumulado WO</th>
               <th>Turno</th>
               <th>Autor</th>
@@ -151,7 +155,7 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
                 <td>{r.magazineCode}</td>
                 <td className="text-right">{r.placasCount}</td>
                 <td className="text-right font-medium text-bgh-700">
-                  {cumulative.get(r.id) ?? r.placasCount}
+                  {(cumulative.get(r.id) ?? r.placasCount) * r.workOrder.troquel}
                 </td>
                 <td>{r.shift === "MORNING" ? "Mañana" : "Tarde"}</td>
                 <td>{r.createdBy.fullName}</td>

@@ -47,7 +47,11 @@ export default async function DashboardPage() {
       }),
       prisma.magazine.findMany({
         where: { createdAt: { gte: today, lte: todayEnd } },
-        select: { smdLineId: true, placasCount: true },
+        select: {
+          smdLineId: true,
+          placasCount: true,
+          workOrder: { select: { troquel: true } },
+        },
       }),
       prisma.defectiveReport.findMany({
         where: { reportDate: { gte: today, lte: todayEnd } },
@@ -72,7 +76,7 @@ export default async function DashboardPage() {
   const completionByLine = allLines.map((l) => {
     const wos = openWOs.filter((w) => w.smdLineId === l.id);
     const produced = wos.reduce(
-      (s, w) => s + w.magazines.reduce((a, m) => a + m.placasCount, 0),
+      (s, w) => s + w.magazines.reduce((a, m) => a + m.placasCount, 0) * w.troquel,
       0
     );
     const total = wos.reduce((s, w) => s + w.totalQty, 0);
@@ -84,7 +88,7 @@ export default async function DashboardPage() {
   const producedTodayByLine = allLines.map((l) => {
     const placas = magazinesToday
       .filter((m) => m.smdLineId === l.id)
-      .reduce((s, m) => s + m.placasCount, 0);
+      .reduce((s, m) => s + m.placasCount * m.workOrder.troquel, 0);
     const defectuosas = defectivesToday
       .filter((d) => d.smdLineId === l.id)
       .reduce((s, d) => s + d.defectiveQty, 0);
@@ -94,7 +98,7 @@ export default async function DashboardPage() {
   // Chart 3: FPY por línea por WO activa (un punto por WO, agrupado en chart por línea)
   const fpyByActiveWo = openWOs
     .map((w) => {
-      const placas = w.magazines.reduce((a, m) => a + m.placasCount, 0);
+      const placas = w.magazines.reduce((a, m) => a + m.placasCount, 0) * w.troquel;
       const defectuosas = w.defectiveReports.reduce((a, d) => a + d.defectiveQty, 0);
       return {
         wo: w.woNumber,
@@ -126,7 +130,7 @@ export default async function DashboardPage() {
 
   // Tabla detalle WO abiertas
   const openWoDetail = openWOs.map((w) => {
-    const produced = w.magazines.reduce((a, m) => a + m.placasCount, 0);
+    const produced = w.magazines.reduce((a, m) => a + m.placasCount, 0) * w.troquel;
     const defectuosas = w.defectiveReports.reduce((a, d) => a + d.defectiveQty, 0);
     const pct = w.totalQty > 0 ? Math.min(100, Math.round((produced / w.totalQty) * 100)) : 0;
     return {

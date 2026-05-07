@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/rbac";
-import { isWoComplete, producedFromMagazines } from "@/lib/wo";
+import { isWoComplete, producedPlacasFromMagazines } from "@/lib/wo";
 import { NewWoForm } from "./new-wo-form";
 import { CloseWoButton } from "./close-button";
 import { DeleteWoButton } from "./delete-button";
@@ -91,6 +91,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
                 <th>Total</th>
                 <th>Target diario</th>
                 <th>Cap.</th>
+                <th>Troquel</th>
                 <th>Producido</th>
                 <th>Avance</th>
                 <th>Apertura</th>
@@ -102,7 +103,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="py-8 text-center text-bgh-400">
+                  <td colSpan={13} className="py-8 text-center text-bgh-400">
                     {hasFilters
                       ? "Sin resultados para los filtros aplicados."
                       : "No hay Work Orders. Creá la primera usando el formulario de arriba."}
@@ -110,10 +111,10 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
                 </tr>
               )}
               {rows.map((w) => {
-                const produced = producedFromMagazines(w.magazines);
-                const pct = w.totalQty > 0 ? Math.min(100, Math.round((produced / w.totalQty) * 100)) : 0;
+                const producedPlacas = producedPlacasFromMagazines(w.magazines, w.troquel);
+                const pct = w.totalQty > 0 ? Math.min(100, Math.round((producedPlacas / w.totalQty) * 100)) : 0;
                 const canReopen =
-                  w.status === "CLOSED" && !isWoComplete(produced, w.totalQty);
+                  w.status === "CLOSED" && !isWoComplete(producedPlacas, w.totalQty);
                 return (
                   <tr key={w.id}>
                     <td className="font-medium">{w.woNumber}</td>
@@ -122,7 +123,8 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
                     <td className="text-right">{w.totalQty}</td>
                     <td className="text-right">{w.dailyTargetQty || "—"}</td>
                     <td className="text-right">{w.magazineCapacity}</td>
-                    <td className="text-right">{produced}</td>
+                    <td className="text-right">{w.troquel}</td>
+                    <td className="text-right">{producedPlacas}</td>
                     <td className="min-w-[120px]">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-full bg-bgh-50 rounded">
@@ -162,6 +164,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
                             totalQty: w.totalQty,
                             dailyTargetQty: w.dailyTargetQty,
                             magazineCapacity: w.magazineCapacity,
+                            troquel: w.troquel,
                             smdLineId: w.smdLineId,
                             hasMagazines: w._count.magazines > 0,
                           }}

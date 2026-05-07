@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
     where,
     orderBy: { createdAt: "desc" },
     include: {
-      workOrder: { select: { woNumber: true, productCode: true, magazineCapacity: true } },
+      workOrder: {
+        select: { woNumber: true, productCode: true, magazineCapacity: true, troquel: true },
+      },
       smdLine: { select: { name: true } },
       createdBy: { select: { username: true, fullName: true } },
     },
@@ -47,7 +49,9 @@ export async function GET(req: NextRequest) {
     Linea: r.smdLine.name,
     CodigoMagazine: r.magazineCode,
     CapacidadWO: r.workOrder.magazineCapacity,
-    Placas: r.placasCount,
+    Troquel: r.workOrder.troquel,
+    Paneles: r.placasCount,
+    Placas: r.placasCount * r.workOrder.troquel,
     Turno: r.shift === "MORNING" ? "Mañana" : "Tarde",
     Autor: r.createdBy.fullName,
     Usuario: r.createdBy.username,
@@ -55,7 +59,7 @@ export async function GET(req: NextRequest) {
 
   if (format === "csv") {
     const header = Object.keys(flat[0] ?? {
-      Fecha: "", WO: "", Producto: "", Linea: "", CodigoMagazine: "", CapacidadWO: "", Placas: "", Turno: "", Autor: "", Usuario: "",
+      Fecha: "", WO: "", Producto: "", Linea: "", CodigoMagazine: "", CapacidadWO: "", Troquel: "", Paneles: "", Placas: "", Turno: "", Autor: "", Usuario: "",
     });
     const lines = [
       header.join(","),
