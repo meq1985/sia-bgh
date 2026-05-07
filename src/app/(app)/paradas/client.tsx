@@ -205,6 +205,7 @@ function NewStopForm({
   onCreated: () => void;
 }) {
   const [smdLineId, setSmdLineId] = useState<number | "">(lines[0]?.id ?? "");
+  const [workOrderId, setWorkOrderId] = useState<string>("");
   const [stationId, setStationId] = useState<number | "">(stations[0]?.id ?? "");
   const [commonFailureId, setCommonFailureId] = useState<number | "">("");
   const [customFailure, setCustomFailure] = useState("");
@@ -221,6 +222,14 @@ function NewStopForm({
     [openWOs, smdLineId]
   );
 
+  useEffect(() => {
+    if (lineOpenWOs.length === 1) {
+      setWorkOrderId(lineOpenWOs[0].id);
+    } else {
+      setWorkOrderId("");
+    }
+  }, [lineOpenWOs]);
+
   function onStationChange(id: number) {
     setStationId(id);
     setCommonFailureId("");
@@ -232,12 +241,17 @@ function NewStopForm({
       setError("Elegí línea y estación.");
       return;
     }
+    if (lineOpenWOs.length >= 2 && !workOrderId) {
+      setError("Elegí una WO entre las abiertas para esta línea.");
+      return;
+    }
     setBusy(true);
     const res = await fetch("/api/line-stops", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         smdLineId,
+        workOrderId: workOrderId || null,
         stationId,
         commonFailureId: commonFailureId === "" ? null : commonFailureId,
         customFailure: customFailure.trim() || null,
@@ -270,32 +284,59 @@ function NewStopForm({
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
           </select>
-          {lineOpenWOs.length === 1 && (
-            <p className="mt-1 text-xs text-bgh-400">
-              WO autovinculada: {lineOpenWOs[0].woNumber} · {lineOpenWOs[0].productCode}
-            </p>
-          )}
-          {lineOpenWOs.length > 1 && (
-            <p className="mt-1 text-xs text-amber-700">
-              {lineOpenWOs.length} WOs abiertas — la parada queda sin WO. Editá luego para asignar.
-            </p>
-          )}
-          {lineOpenWOs.length === 0 && (
-            <p className="mt-1 text-xs text-bgh-400">Sin WO abierta para esta línea.</p>
-          )}
         </div>
         <div>
-          <label className="label-base">Estación</label>
-          <select
-            className="input-base"
-            value={stationId}
-            onChange={(e) => onStationChange(Number(e.target.value))}
-          >
-            {stations.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          <label className="label-base">Work Order</label>
+          {lineOpenWOs.length === 0 && (
+            <>
+              <input className="input-base" value="Sin WO abierta" disabled readOnly />
+              <p className="mt-1 text-xs text-bgh-400">La parada se registrará sin WO.</p>
+            </>
+          )}
+          {lineOpenWOs.length === 1 && (
+            <>
+              <input
+                className="input-base"
+                value={`${lineOpenWOs[0].woNumber} · ${lineOpenWOs[0].productCode}`}
+                disabled
+                readOnly
+              />
+              <p className="mt-1 text-xs text-bgh-400">Autovinculada (única WO abierta).</p>
+            </>
+          )}
+          {lineOpenWOs.length >= 2 && (
+            <>
+              <select
+                className="input-base"
+                value={workOrderId}
+                onChange={(e) => setWorkOrderId(e.target.value)}
+              >
+                <option value="">— Elegir WO —</option>
+                {lineOpenWOs.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.woNumber} · {w.productCode}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-bgh-400">
+                {lineOpenWOs.length} WOs abiertas en esta línea.
+              </p>
+            </>
+          )}
         </div>
+      </div>
+
+      <div>
+        <label className="label-base">Estación</label>
+        <select
+          className="input-base"
+          value={stationId}
+          onChange={(e) => onStationChange(Number(e.target.value))}
+        >
+          {stations.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

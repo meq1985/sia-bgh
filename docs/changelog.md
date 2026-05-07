@@ -15,6 +15,13 @@ Registro de cambios en SIA. Sigue el formato de [Keep a Changelog](https://keepa
   agregaciones, separados del UI para que sean testeables.
 - 22 tests unitarios nuevos sobre los helpers.
 
+### Cambiado
+- **Paradas de línea — selector de WO al iniciar:** cuando la línea tiene
+  2 o más WOs abiertas, se despliega un selector para elegir una en el
+  momento de crear la parada (antes quedaba sin WO y había que editar
+  después). Si hay una sola WO abierta se autovincula como antes; si no
+  hay ninguna, la parada se registra sin WO.
+
 ### Próximamente
 - Flujo de defectivos con destino: Validación / Reparación / Scrap.
 - Cierre formal de turno con override por horas extra.
