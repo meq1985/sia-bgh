@@ -7,14 +7,48 @@ import { CloseWoButton } from "./close-button";
 import { DeleteWoButton } from "./delete-button";
 import { ReopenWoButton } from "./reopen-button";
 import { EditWoButton } from "./edit-wo-button";
+import { WorkOrdersFilters } from "./filters";
 
-export default async function WorkOrdersPage() {
+type SearchParams = Promise<{
+  q?: string;
+  smdLineId?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+}>;
+
+export default async function WorkOrdersPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireSession();
   const role = session.user.role;
   if (role === "OPERADOR") redirect("/magazines");
 
+  const sp = await searchParams;
+  const where: Record<string, unknown> = {};
+  if (sp.smdLineId) where.smdLineId = Number(sp.smdLineId);
+  if (sp.status === "OPEN" || sp.status === "CLOSED") where.status = sp.status;
+  if (sp.q) {
+    const q = sp.q.trim();
+    if (q) {
+      where.OR = [
+        { woNumber: { contains: q, mode: "insensitive" } },
+        { productCode: { contains: q, mode: "insensitive" } },
+      ];
+    }
+  }
+  if (sp.from || sp.to) {
+    const range: { gte?: Date; lte?: Date } = {};
+    if (sp.from) range.gte = new Date(sp.from);
+    if (sp.to) {
+      const d = new Date(sp.to);
+      d.setHours(23, 59, 59, 999);
+      range.lte = d;
+    }
+    where.openedAt = range;
+  }
+
   const [rows, lines] = await Promise.all([
     prisma.workOrder.findMany({
+      where,
       orderBy: [{ status: "asc" }, { openedAt: "desc" }],
       include: {
         smdLine: { select: { name: true } },
@@ -27,6 +61,7 @@ export default async function WorkOrdersPage() {
   ]);
 
   const canManage = role === "ADMIN" || role === "SUPERVISOR";
+  const hasFilters = Object.values(sp).some((v) => v && String(v).trim() !== "");
 
   return (
     <div className="space-y-5">
@@ -37,6 +72,11 @@ export default async function WorkOrdersPage() {
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-bgh-400">Nueva WO</h2>
         <NewWoForm lines={lines} />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-bgh-400">Filtros</h2>
+        <WorkOrdersFilters lines={lines} initial={sp} />
       </section>
 
       <section className="space-y-2">
@@ -63,7 +103,9 @@ export default async function WorkOrdersPage() {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={12} className="py-8 text-center text-bgh-400">
-                    No hay Work Orders. Creá la primera usando el formulario de arriba.
+                    {hasFilters
+                      ? "Sin resultados para los filtros aplicados."
+                      : "No hay Work Orders. Creá la primera usando el formulario de arriba."}
                   </td>
                 </tr>
               )}

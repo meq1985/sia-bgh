@@ -42,6 +42,9 @@ Registro de cambios en SIA. Sigue el formato de [Keep a Changelog](https://keepa
   página `/magazines/new` y el botón "Nuevo magazine"; el formulario
   ahora aparece arriba del listado, igual que en `/paradas`. Se filtran
   las WOs al 100% para que no aparezcan en el desplegable.
+- **Work Orders — filtros en el listado.** Nueva sección de filtros en
+  `/work-orders` con búsqueda por número de WO o código de producto,
+  línea, estado (Abiertas/Cerradas) y rango de fechas de apertura.
 
 ### Agregado (helpers)
 - `src/lib/wo.ts` con `producedFromMagazines` e `isWoComplete`,
