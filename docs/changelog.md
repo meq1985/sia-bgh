@@ -4,11 +4,27 @@ Registro de cambios en SIA. Sigue el formato de [Keep a Changelog](https://keepa
 
 ## [Unreleased]
 
+### Agregado
+- **Dashboard — sección "Paradas de línea"** con 5 gráficos nuevos:
+  1. Tiempo de parada hoy por línea (incluye paradas en curso).
+  2. Tendencia diaria de tiempo de parada — últimos 7 días.
+  3. Top 10 estaciones por tiempo de parada — últimos 7 días.
+  4. Top 10 fallas más frecuentes — últimos 7 días.
+  5. MTTR por estación — últimos 30 días.
+- `src/lib/lineStopAggregations.ts` con 5 helpers puros para las
+  agregaciones, separados del UI para que sean testeables.
+- 22 tests unitarios nuevos sobre los helpers.
+
+### Cambiado
+- **Paradas de línea — selector de WO al iniciar:** cuando la línea tiene
+  2 o más WOs abiertas, se despliega un selector para elegir una en el
+  momento de crear la parada (antes quedaba sin WO y había que editar
+  después). Si hay una sola WO abierta se autovincula como antes; si no
+  hay ninguna, la parada se registra sin WO.
+
 ### Próximamente
 - Flujo de defectivos con destino: Validación / Reparación / Scrap.
 - Cierre formal de turno con override por horas extra.
-- Guías de usuario por rol.
-- Documentación de desarrollo (arquitectura, modelo de datos, testing).
 
 ## [0.1.0] — 2026-04
 
