@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "SUPERVISOR");
   const { id } = await params;
   await prisma.magazine.delete({ where: { id } });
   return NextResponse.json({ ok: true });

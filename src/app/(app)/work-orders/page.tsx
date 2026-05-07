@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/rbac";
+import { isWoComplete, producedFromMagazines } from "@/lib/wo";
 import { NewWoForm } from "./new-wo-form";
 import { CloseWoButton } from "./close-button";
 import { DeleteWoButton } from "./delete-button";
+import { ReopenWoButton } from "./reopen-button";
+import { EditWoButton } from "./edit-wo-button";
 
 export default async function WorkOrdersPage() {
   const session = await requireSession();
@@ -23,7 +26,7 @@ export default async function WorkOrdersPage() {
     prisma.smdLine.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
 
-  const canDelete = role === "ADMIN";
+  const canManage = role === "ADMIN" || role === "SUPERVISOR";
 
   return (
     <div className="space-y-5">
@@ -65,8 +68,10 @@ export default async function WorkOrdersPage() {
                 </tr>
               )}
               {rows.map((w) => {
-                const produced = w.magazines.reduce((s, m) => s + m.placasCount, 0);
+                const produced = producedFromMagazines(w.magazines);
                 const pct = w.totalQty > 0 ? Math.min(100, Math.round((produced / w.totalQty) * 100)) : 0;
+                const canReopen =
+                  w.status === "CLOSED" && !isWoComplete(produced, w.totalQty);
                 return (
                   <tr key={w.id}>
                     <td className="font-medium">{w.woNumber}</td>
@@ -106,8 +111,26 @@ export default async function WorkOrdersPage() {
                       ) : "—"}
                     </td>
                     <td className="space-x-2 whitespace-nowrap">
+                      {canManage && (
+                        <EditWoButton
+                          wo={{
+                            id: w.id,
+                            woNumber: w.woNumber,
+                            productCode: w.productCode,
+                            totalQty: w.totalQty,
+                            dailyTargetQty: w.dailyTargetQty,
+                            magazineCapacity: w.magazineCapacity,
+                            smdLineId: w.smdLineId,
+                            hasMagazines: w._count.magazines > 0,
+                          }}
+                          lines={lines}
+                        />
+                      )}
                       {w.status === "OPEN" && <CloseWoButton id={w.id} wo={w.woNumber} />}
-                      {canDelete && w._count.magazines === 0 && (
+                      {canManage && canReopen && (
+                        <ReopenWoButton id={w.id} wo={w.woNumber} />
+                      )}
+                      {canManage && w._count.magazines === 0 && (
                         <DeleteWoButton id={w.id} wo={w.woNumber} />
                       )}
                     </td>

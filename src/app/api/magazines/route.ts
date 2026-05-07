@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/rbac";
+import { isWoComplete, producedFromMagazines } from "@/lib/wo";
 
 const createSchema = z.object({
   magazineCode: z.string().trim().min(1).max(64),
@@ -63,7 +64,10 @@ export async function POST(req: NextRequest) {
   }
   const data = parsed.data;
 
-  const wo = await prisma.workOrder.findUnique({ where: { id: data.workOrderId } });
+  const wo = await prisma.workOrder.findUnique({
+    where: { id: data.workOrderId },
+    include: { magazines: { select: { placasCount: true } } },
+  });
   if (!wo) return NextResponse.json({ error: "WO no encontrada" }, { status: 404 });
   if (wo.status !== "OPEN") {
     return NextResponse.json({ error: "La WO está cerrada" }, { status: 400 });
@@ -81,15 +85,37 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const created = await prisma.magazine.create({
-    data: {
-      magazineCode: data.magazineCode,
-      workOrderId: data.workOrderId,
-      smdLineId: data.smdLineId,
-      placasCount: data.placasCount,
-      shift: data.shift,
-      createdById: session.user.id,
-    },
+  const produced = producedFromMagazines(wo.magazines);
+  if (isWoComplete(produced, wo.totalQty)) {
+    return NextResponse.json(
+      { error: "WO ya completada al 100%" },
+      { status: 400 }
+    );
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const created = await tx.magazine.create({
+      data: {
+        magazineCode: data.magazineCode,
+        workOrderId: data.workOrderId,
+        smdLineId: data.smdLineId,
+        placasCount: data.placasCount,
+        shift: data.shift,
+        createdById: session.user.id,
+      },
+    });
+    if (isWoComplete(produced + data.placasCount, wo.totalQty)) {
+      await tx.workOrder.update({
+        where: { id: wo.id },
+        data: {
+          status: "CLOSED",
+          closedAt: new Date(),
+          closedById: session.user.id,
+        },
+      });
+    }
+    return created;
   });
-  return NextResponse.json(created, { status: 201 });
+
+  return NextResponse.json(result, { status: 201 });
 }

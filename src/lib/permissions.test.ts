@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ALL_ROLES,
   canEditMagazines,
+  canManageMagazines,
+  canManageWorkOrders,
   canValidateLineStop,
   type AppRole,
 } from "./permissions";
@@ -50,6 +52,22 @@ describe("canValidateLineStop", () => {
     for (const role of ALL_ROLES) {
       expect(typeof canValidateLineStop(role)).toBe("boolean");
       expect(typeof canEditMagazines(role)).toBe("boolean");
+    }
+  });
+});
+
+describe("canManageMagazines / canManageWorkOrders", () => {
+  it("ADMIN y SUPERVISOR pueden gestionar magazines y WOs", () => {
+    expect(canManageMagazines("ADMIN")).toBe(true);
+    expect(canManageMagazines("SUPERVISOR")).toBe(true);
+    expect(canManageWorkOrders("ADMIN")).toBe(true);
+    expect(canManageWorkOrders("SUPERVISOR")).toBe(true);
+  });
+
+  it("OPERADOR, MANTENIMIENTO y PROGRAMACION no pueden gestionar", () => {
+    for (const r of ["OPERADOR", "MANTENIMIENTO", "PROGRAMACION"] as AppRole[]) {
+      expect(canManageMagazines(r)).toBe(false);
+      expect(canManageWorkOrders(r)).toBe(false);
     }
   });
 });

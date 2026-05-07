@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { cumulativeByMagazine } from "@/lib/cumulative";
+import { requireSession } from "@/lib/rbac";
 import { MagazinesFilters } from "./filters";
+import { MagazineActions } from "./magazine-actions";
 
 type SearchParams = Promise<{
   workOrderId?: string;
@@ -12,6 +14,9 @@ type SearchParams = Promise<{
 }>;
 
 export default async function MagazinesPage({ searchParams }: { searchParams: SearchParams }) {
+  const session = await requireSession();
+  const role = session.user.role;
+  const canManage = role === "ADMIN" || role === "SUPERVISOR";
   const sp = await searchParams;
   const where: Record<string, unknown> = {};
   if (sp.workOrderId) where.workOrderId = sp.workOrderId;
@@ -92,12 +97,15 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
               <th>Acumulado WO</th>
               <th>Turno</th>
               <th>Autor</th>
+              {canManage && <th></th>}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-bgh-400">Sin registros.</td>
+                <td colSpan={canManage ? 10 : 9} className="py-8 text-center text-bgh-400">
+                  Sin registros.
+                </td>
               </tr>
             )}
             {rows.map((r) => (
@@ -113,6 +121,19 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
                 </td>
                 <td>{r.shift === "MORNING" ? "Mañana" : "Tarde"}</td>
                 <td>{r.createdBy.fullName}</td>
+                {canManage && (
+                  <td>
+                    <MagazineActions
+                      mag={{
+                        id: r.id,
+                        magazineCode: r.magazineCode,
+                        placasCount: r.placasCount,
+                        shift: r.shift,
+                        magazineCapacity: r.workOrder.magazineCapacity,
+                      }}
+                    />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

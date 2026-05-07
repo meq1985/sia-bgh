@@ -21,6 +21,31 @@ Registro de cambios en SIA. Sigue el formato de [Keep a Changelog](https://keepa
   momento de crear la parada (antes quedaba sin WO y había que editar
   después). Si hay una sola WO abierta se autovincula como antes; si no
   hay ninguna, la parada se registra sin WO.
+- **Magazines — auto-cierre de WO al 100%.** El POST `/api/magazines`
+  bloquea la creación si la WO ya está completa y, al alcanzar o
+  superar el `totalQty`, cierra la WO automáticamente. El form de
+  `Nuevo magazine` filtra las WOs completadas como defensa en
+  profundidad.
+- **Work Orders — reapertura.** Nuevo endpoint
+  `POST /api/wo/[id]/reopen` y botón en el listado para reabrir WOs
+  cerradas con menos del 100% producido (ADMIN/SUPERVISOR).
+- **Work Orders — edición.** Nuevo endpoint `PATCH /api/wo/[id]` con
+  modal en la UI. Si la WO no tiene magazines se pueden editar todos
+  los campos (`woNumber`, `productCode`, `totalQty`, `dailyTargetQty`,
+  `magazineCapacity`, `smdLineId`); con magazines cargados se restringe
+  a `productCode`, `totalQty`, `dailyTargetQty` y `magazineCapacity`.
+- **Magazines y WOs — borrado y edición para SUPERVISOR.** Antes
+  `DELETE /api/magazines/[id]` y `DELETE /api/wo/[id]` requerían ADMIN;
+  ahora también lo permite SUPERVISOR. La UI suma botones Editar/Borrar
+  por fila en `/magazines` y `/work-orders`.
+
+### Agregado (helpers)
+- `src/lib/wo.ts` con `producedFromMagazines` e `isWoComplete`,
+  reusados en API, dashboard y UI.
+- `canManageMagazines` y `canManageWorkOrders` en
+  `src/lib/permissions.ts`.
+- Tests unitarios nuevos en `src/lib/wo.test.ts` y casos extra en
+  `src/lib/permissions.test.ts`.
 
 ### Próximamente
 - Flujo de defectivos con destino: Validación / Reparación / Scrap.
