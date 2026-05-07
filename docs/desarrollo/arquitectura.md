@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
 ```mermaid
 sequenceDiagram
   participant Op as Operador (browser)
-  participant Form as /magazines/new (form, client)
+  participant Form as /magazines (form embebido, client)
   participant API as POST /api/magazines (handler)
   participant DB as Postgres
 

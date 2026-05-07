@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { cumulativeByMagazine } from "@/lib/cumulative";
 import { requireSession } from "@/lib/rbac";
+import { isWoComplete, producedFromMagazines } from "@/lib/wo";
 import { MagazinesFilters } from "./filters";
 import { MagazineActions } from "./magazine-actions";
+import { NewMagazineForm } from "./new-magazine-form";
 
 type SearchParams = Promise<{
   workOrderId?: string;
@@ -33,7 +34,7 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
     where.createdAt = range;
   }
 
-  const [rows, lines, openWOs] = await Promise.all([
+  const [rows, lines, openWOs, openWOsWithMags] = await Promise.all([
     prisma.magazine.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -46,7 +47,31 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
     }),
     prisma.smdLine.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     prisma.workOrder.findMany({ orderBy: { openedAt: "desc" }, take: 200 }),
+    prisma.workOrder.findMany({
+      where: { status: "OPEN" },
+      orderBy: { openedAt: "desc" },
+      select: {
+        id: true,
+        woNumber: true,
+        productCode: true,
+        magazineCapacity: true,
+        totalQty: true,
+        smdLineId: true,
+        magazines: { select: { placasCount: true } },
+      },
+    }),
   ]);
+
+  const eligibleWOs = openWOsWithMags
+    .filter((w) => !isWoComplete(producedFromMagazines(w.magazines), w.totalQty))
+    .map((w) => ({
+      id: w.id,
+      woNumber: w.woNumber,
+      productCode: w.productCode,
+      magazineCapacity: w.magazineCapacity,
+      totalQty: w.totalQty,
+      smdLineId: w.smdLineId,
+    }));
 
   const woIds = Array.from(new Set(rows.map((r) => r.workOrderId)));
   const woAllMags = woIds.length
@@ -78,11 +103,20 @@ export default async function MagazinesPage({ searchParams }: { searchParams: Se
           >
             CSV
           </a>
-          <Link className="btn-primary" href="/magazines/new">Nuevo magazine</Link>
         </div>
       </div>
 
-      <MagazinesFilters lines={lines} workOrders={openWOs} initial={sp} />
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-bgh-400">
+          Nuevo magazine
+        </h2>
+        <NewMagazineForm lines={lines} workOrders={eligibleWOs} />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-bgh-400">Filtros</h2>
+        <MagazinesFilters lines={lines} workOrders={openWOs} initial={sp} />
+      </section>
 
       <div className="card overflow-x-auto p-0">
         <table className="table-base">

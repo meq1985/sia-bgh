@@ -14,7 +14,13 @@ type WO = {
   smdLineId: number;
 };
 
-export function NewMagazineForm({ lines, workOrders }: { lines: Line[]; workOrders: WO[] }) {
+export function NewMagazineForm({
+  lines,
+  workOrders,
+}: {
+  lines: Line[];
+  workOrders: WO[];
+}) {
   const router = useRouter();
   const [smdLineId, setSmdLineId] = useState<number | "">(lines[0]?.id ?? "");
   const filteredWOs = useMemo(
@@ -64,45 +70,49 @@ export function NewMagazineForm({ lines, workOrders }: { lines: Line[]; workOrde
       setError(typeof data.error === "string" ? data.error : "Error al guardar.");
       return;
     }
-    router.push("/magazines");
+    setMagazineCode("");
+    setPlacasCount("");
     router.refresh();
   }
 
   return (
-    <form onSubmit={onSubmit} className="card space-y-4">
-      <div>
-        <label className="label-base">Línea SMD</label>
-        <select
-          className="input-base"
-          value={smdLineId}
-          onChange={(e) => onLineChange(Number(e.target.value))}
-        >
-          {lines.map((l) => (
-            <option key={l.id} value={l.id}>{l.name}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="label-base">Work Order</label>
-        {filteredWOs.length === 0 ? (
-          <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-            No hay WO abiertas para esta línea. Pedile al admin o supervisor que cree una.
-          </div>
-        ) : (
+    <form onSubmit={onSubmit} className="card space-y-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div>
+          <label className="label-base">Línea SMD</label>
           <select
             className="input-base"
-            value={workOrderId}
-            onChange={(e) => setWorkOrderId(e.target.value)}
+            value={smdLineId}
+            onChange={(e) => onLineChange(Number(e.target.value))}
           >
-            {filteredWOs.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.woNumber} · {w.productCode} (cap. {w.magazineCapacity}, total {w.totalQty})
-              </option>
+            {lines.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
             ))}
           </select>
-        )}
+        </div>
+        <div>
+          <label className="label-base">Work Order</label>
+          {filteredWOs.length === 0 ? (
+            <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+              No hay WO abiertas con cupo para esta línea.
+            </div>
+          ) : (
+            <select
+              className="input-base"
+              value={workOrderId}
+              onChange={(e) => setWorkOrderId(e.target.value)}
+            >
+              {filteredWOs.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.woNumber} · {w.productCode} (cap. {w.magazineCapacity}, total {w.totalQty})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div>
           <label className="label-base">Código de magazine</label>
           <input
@@ -110,6 +120,21 @@ export function NewMagazineForm({ lines, workOrders }: { lines: Line[]; workOrde
             value={magazineCode}
             onChange={(e) => setMagazineCode(e.target.value)}
             placeholder="ej. MG-001"
+          />
+        </div>
+        <div>
+          <label className="label-base">
+            Placas {selectedWO && (
+              <span className="text-bgh-400 font-normal">(máx {selectedWO.magazineCapacity})</span>
+            )}
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={selectedWO?.magazineCapacity ?? undefined}
+            className="input-base"
+            value={placasCount}
+            onChange={(e) => setPlacasCount(e.target.value === "" ? "" : Number(e.target.value))}
           />
         </div>
         <div>
@@ -124,26 +149,14 @@ export function NewMagazineForm({ lines, workOrders }: { lines: Line[]; workOrde
           </select>
         </div>
       </div>
-      <div>
-        <label className="label-base">
-          Placas {selectedWO && <span className="text-bgh-400 font-normal">(máx {selectedWO.magazineCapacity})</span>}
-        </label>
-        <input
-          type="number"
-          min={1}
-          max={selectedWO?.magazineCapacity ?? undefined}
-          className="input-base"
-          value={placasCount}
-          onChange={(e) => setPlacasCount(e.target.value === "" ? "" : Number(e.target.value))}
-        />
-      </div>
+
       {error && (
         <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
-      <div className="flex gap-2 justify-end">
-        <button type="button" onClick={() => router.back()} className="btn-secondary">Cancelar</button>
+
+      <div className="flex justify-end">
         <button
           type="submit"
           className="btn-primary"

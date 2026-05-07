@@ -38,6 +38,10 @@ Registro de cambios en SIA. Sigue el formato de [Keep a Changelog](https://keepa
   `DELETE /api/magazines/[id]` y `DELETE /api/wo/[id]` requerían ADMIN;
   ahora también lo permite SUPERVISOR. La UI suma botones Editar/Borrar
   por fila en `/magazines` y `/work-orders`.
+- **Magazines — formulario embebido en `/magazines`.** Se eliminó la
+  página `/magazines/new` y el botón "Nuevo magazine"; el formulario
+  ahora aparece arriba del listado, igual que en `/paradas`. Se filtran
+  las WOs al 100% para que no aparezcan en el desplegable.
 
 ### Agregado (helpers)
 - `src/lib/wo.ts` con `producedFromMagazines` e `isWoComplete`,
